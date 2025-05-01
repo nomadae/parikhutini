@@ -1,0 +1,24 @@
+@import "node_modules/ol/ol.css";
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+.pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 20%;
+  background: ghostwhite;
+  border-left: 5px solid lightsteelblue;
+  box-sizing: border-box;
+  padding: 0 20px;
+}
