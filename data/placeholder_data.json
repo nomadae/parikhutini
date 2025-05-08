@@ -1,0 +1,14 @@
+[
+    {
+        "nombre":"Paricutin",
+        "edad": 84,
+        "coordenadas": [19.493313,-102.251729],
+        "descripcion": "Lorem"
+    },
+    {
+        "nombre": "Sajo",
+        "edad": 200,
+        "coordenadas":[19.749523,-101.438601],
+        "descripcion": "Lorem"
+    }
+]
