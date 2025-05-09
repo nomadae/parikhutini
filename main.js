@@ -3,23 +3,19 @@ import {Map, View} from 'ol';
 import {useGeographic} from 'ol/proj.js';
 // import TileLayer from 'ol/layer/Tile';
 // import OSM from 'ol/source/OSM';
-import Attribution from 'ol/control/Attribution'
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 import apply from 'ol-mapbox-style';
-import {Vector} from 'ol/source'
+import {Vector} from 'ol/source';
 import VectorLayer from 'ol/layer/Vector';
 import { Icon, Style } from 'ol/style';
 
 
 useGeographic();
 
-const key = 'uQqIJhG3KGvtz6fLtKWj';
+const key = import.meta.env.VITE_MAPTILER_KEY;
 const styleJson = `https://api.maptiler.com/maps/hybrid/style.json?key=${key}`;
 
-const attribution = new Attribution({
-  collapsible: false,
-});
 
 const map = new Map({
   target: 'map',
