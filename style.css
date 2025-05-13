@@ -22,3 +22,6 @@ html, body {
   box-sizing: border-box;
   padding: 0 20px;
 }
+.popover-body {
+  min-width: 276px;
+}

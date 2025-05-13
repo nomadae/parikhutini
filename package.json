@@ -10,6 +10,7 @@
     "vite": "^6.2.4"
   },
   "dependencies": {
+    "dotenv": "^16.5.0",
     "ol": "latest",
     "ol-mapbox-style": "^12.6.0"
   }
