@@ -10,16 +10,14 @@ import { Icon, Style } from 'ol/style';
 import { toStringHDMS } from 'ol/coordinate';
 
 
+////////////////////////////////////////////
+////        Map Configuration           ////
+////////////////////////////////////////////
+
 useGeographic();
 
 const key = import.meta.env.VITE_MAPTILER_KEY;
 const styleJson = `https://api.maptiler.com/maps/hybrid/style.json?key=${key}`;
-
-
-const container = document.getElementById('popup');
-const content = document.getElementById('popup-content');
-const closer = document.getElementById('popup-closer');
-
 
 const map = new Map({
   target: 'map',
@@ -32,6 +30,9 @@ const map = new Map({
 
 apply(map, styleJson);
 
+////////////////////////////////////////////
+////         Information Layers         ////
+////////////////////////////////////////////
 
 const layer = new VectorLayer({
   zIndex: 1000,
@@ -54,6 +55,14 @@ const layer = new VectorLayer({
 });
 
 map.addLayer(layer);
+
+////////////////////////////////////////////
+////              Popup                 ////
+////////////////////////////////////////////
+
+const container = document.getElementById('popup');
+const content = document.getElementById('popup-content');
+const closer = document.getElementById('popup-closer');
 
 const popup = new Overlay({
   element: container,
@@ -123,6 +132,28 @@ map.on('click', function (evt) {
 });
 
 ////////////////////////////////////////////
+////              Cursor                ////
+////////////////////////////////////////////
+
+const changeCursorStyle = function(pixel, target) {
+  const feature = target.closest('.ol-control')
+    ? undefined
+    : map.forEachFeatureAtPixel(pixel, function (feature) {
+        return feature;
+  });
+  if (feature instanceof Feature) {
+    target.style.cursor = 'pointer';
+  } else {
+    target.style.cursor = '';
+  }
+}
+
+map.on('pointermove', function (evt) {
+  changeCursorStyle(evt.pixel, evt.originalEvent.target);
+});
+
+
+////////////////////////////////////////////
 ////            Tooltip                /////
 ////////////////////////////////////////////
 
@@ -136,7 +167,7 @@ const displayFeatureInfo = function (pixel, target) {
         return feature;
       });
   if (feature instanceof Feature) {
-    info.style.left = pixel[0] + 'px';
+    info.style.left = (pixel[0]+10) + 'px';
     info.style.top = pixel[1] + 'px';
     if (feature !== currentFeature) {
       info.style.visibility = 'visible';
