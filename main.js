@@ -38,7 +38,8 @@ const layer = new VectorLayer({
   source: new Vector({
     features: [
       new Feature({
-        geometry: new Point([-102.25131182429995, 19.494074355290678])
+        geometry: new Point([-102.25131182429995, 19.494074355290678]),
+        name: "Volcán Paricutín",
       })
     ]
   }),
@@ -46,7 +47,8 @@ const layer = new VectorLayer({
     image: new Icon({
       anchor: [0.5, 1],
       crossOrigin: 'anonymous',
-      src: 'icon.png'
+      src: 'icon4.png',
+      // color: '#75FB4C'
     })
   })
 });
@@ -118,4 +120,48 @@ map.on('click', function (evt) {
         console.log('No feature found near clicked zone.');
       }
     }
+});
+
+////////////////////////////////////////////
+////            Tooltip                /////
+////////////////////////////////////////////
+
+const info = document.getElementById('info');
+
+let currentFeature;
+const displayFeatureInfo = function (pixel, target) {
+  const feature = target.closest('.ol-control')
+    ? undefined
+    : map.forEachFeatureAtPixel(pixel, function (feature) {
+        return feature;
+      });
+  if (feature instanceof Feature) {
+    info.style.left = pixel[0] + 'px';
+    info.style.top = pixel[1] + 'px';
+    if (feature !== currentFeature) {
+      info.style.visibility = 'visible';
+      info.innerText = feature.values_.name;
+    }
+  } else {
+    info.style.visibility = 'hidden';
+  }
+  currentFeature = feature;
+};
+
+map.on('pointermove', function (evt) {
+  if (evt.dragging) {
+    info.style.visibility = 'hidden';
+    currentFeature = undefined;
+    return;
+  }
+  displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+});
+
+map.on('click', function (evt) {
+  displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+});
+
+map.getTargetElement().addEventListener('pointerleave', function () {
+  currentFeature = undefined;
+  info.style.visibility = 'hidden';
 });
