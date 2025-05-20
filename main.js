@@ -8,7 +8,7 @@ import {Vector} from 'ol/source';
 import VectorLayer from 'ol/layer/Vector';
 import { Icon, Style } from 'ol/style';
 import { toStringHDMS } from 'ol/coordinate';
-
+import GeoJSON from 'ol/format/GeoJSON.js'
 
 ////////////////////////////////////////////
 ////        Map Configuration           ////
@@ -34,15 +34,31 @@ apply(map, styleJson);
 ////         Information Layers         ////
 ////////////////////////////////////////////
 
+// const layer = new VectorLayer({
+//   zIndex: 1000,
+//   source: new Vector({
+//     features: [
+//       new Feature({
+//         geometry: new Point([-102.25131182429995, 19.494074355290678]),
+//         name: "Volcán Paricutín",
+//       })
+//     ]
+//   }),
+//   style: new Style({
+//     image: new Icon({
+//       anchor: [0.5, 1],
+//       crossOrigin: 'anonymous',
+//       src: 'icon4.png',
+//       // color: '#75FB4C'
+//     })
+//   })
+// });
+
 const layer = new VectorLayer({
   zIndex: 1000,
   source: new Vector({
-    features: [
-      new Feature({
-        geometry: new Point([-102.25131182429995, 19.494074355290678]),
-        name: "Volcán Paricutín",
-      })
-    ]
+    url: './data/all.json',
+    format: new GeoJSON(),
   }),
   style: new Style({
     image: new Icon({
@@ -53,6 +69,7 @@ const layer = new VectorLayer({
     })
   })
 });
+
 
 map.addLayer(layer);
 
@@ -171,7 +188,7 @@ const displayFeatureInfo = function (pixel, target) {
     info.style.top = pixel[1] + 'px';
     if (feature !== currentFeature) {
       info.style.visibility = 'visible';
-      info.innerText = feature.values_.name;
+      info.innerText = feature.values_.nombre;
     }
   } else {
     info.style.visibility = 'hidden';
