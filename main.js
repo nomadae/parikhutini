@@ -9,19 +9,31 @@ import VectorLayer from 'ol/layer/Vector';
 import { Icon, Style } from 'ol/style';
 import { toStringHDMS } from 'ol/coordinate';
 import GeoJSON from 'ol/format/GeoJSON.js'
+// import {register} from 'ol/proj/proj4.js';
+// import {get as getProjection} from 'ol/proj.js';
+// import proj4 from 'proj4/dist/proj4';
+// import proj from 'ol/proj';
+
 
 ////////////////////////////////////////////
 ////        Map Configuration           ////
 ////////////////////////////////////////////
-
+// proj.setProj4(proj4); 
 useGeographic();
 
 const key = import.meta.env.VITE_MAPTILER_KEY;
 const styleJson = `https://api.maptiler.com/maps/hybrid/style.json?key=${key}`;
 
+
+// proj4.defs('ESRI:102009', '+proj=lcc +lat_0=12 +lon_0=-102 +lat_1=17.5 +lat_2=29.5 +x_0=2500000 +y_0=0 +ellps=GRS80 +units=m +no_defs +type=crs');
+// register(proj4);
+// const lambertNorthAmericaConicalProjection = getProjection('ESRI:102009');
+
 const map = new Map({
   target: 'map',
   view: new View({
+    projection: "EPSG:3857",
+    // projection: lambertNorthAmericaConicalProjection,
     constrainResolution: true,
     center: [-102.25131182429995, 19.494074355290678 ],
     zoom: 14

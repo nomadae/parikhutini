@@ -12,6 +12,7 @@
   "dependencies": {
     "dotenv": "^16.5.0",
     "ol": "latest",
-    "ol-mapbox-style": "^12.6.0"
+    "ol-mapbox-style": "^12.6.0",
+    "three": "^0.176.0"
   }
 }

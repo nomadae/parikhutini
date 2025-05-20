@@ -2,11 +2,11 @@ from dbfread import DBF
 import pandas as pd
 import geopandas
 import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('qt5agg')
+# import matplotlib
+# matplotlib.use('qt5agg')
 # %matplotlib inline
 
-dbf = DBF('./data/ce/ce_ccl.dbf', load=True, encoding="utf-8")
+dbf = DBF('./data/ce/ce_wgs.dbf', load=True, encoding="utf-8")
 df = pd.DataFrame(iter(dbf))
 df_localized = df[df['LONGI']!=0]
 # df_localized = df_localized[df_localized["Nombre"].str.startswith('V.')]
@@ -28,7 +28,7 @@ print(gdf.head())
 gdf.plot()
 plt.show()
 
-# gdf = gdf.to_crs(epsg=4326)
+gdf = gdf.to_crs(epsg=3857)
 
 gdf.to_file('./data/all.json', driver="GeoJSON")
 
