@@ -30,7 +30,7 @@ plt.show()
 
 # gdf = gdf.to_crs(epsg=4326)
 
-gdf.to_file('./data/all.json', driver="GeoJSON")
+gdf.to_file('./data/all.json', driver="GeoJSON", index=True)
 
 # df_volcanoes = df[df['Nombre'].str.contains('V')]
 
