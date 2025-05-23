@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Terrain from TIFF</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">3D Terrain Viewer</div>
+    <div id="loading">Loading TIFF data and initializing 3D viewer...</div>
+    <div id="controls">
+        <label>Height Scale: <input type="range" id="heightScale" min="0.001" max="0.1" step="0.001" value="0.01"></label>
+        <label>Wireframe: <input type="checkbox" id="wireframe"></label>
+    </div>
+
+    <!-- Three.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <!-- GeoTIFF.js library for reading TIFF files -->
+    <script src="https://cdn.jsdelivr.net/npm/geotiff@2.0.4/dist-browser/geotiff.js"></script>
+    <!-- OrbitControls for camera interaction -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // Main application
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Scene setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            
+            // Camera
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+            camera.position.z = 500;
+            
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+            
+            // Controls
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Load TIFF data
+            try {
+                const tiffUrl = './data/mde/tancitaro_mde.tif'; // Replace with your TIFF file URL
+                const { width, height, data } = await loadTIFF(tiffUrl);
+                
+                // Remove loading message
+                document.getElementById('loading').remove();
+                
+                // Create terrain
+                let terrain = createTerrainMesh(data, width, height, {
+                    scale: 1,       // Horizontal scale
+                    zScale: 0.01    // Vertical scale (height)
+                });
+                scene.add(terrain);
+                
+                // Center camera on terrain
+                const centerX = (width * 1) / 2;
+                const centerY = (height * 1) / 2;
+                camera.position.set(centerX, centerY, Math.max(width, height));
+                controls.target.set(centerX, centerY, 0);
+                
+                // Add grid helper
+                const gridHelper = new THREE.GridHelper(Math.max(width, height) * 1.2, 20);
+                //scene.add(gridHelper);
+                
+                // Add axes helper
+                const axesHelper = new THREE.AxesHelper(50);
+                scene.add(axesHelper);
+                
+                // Controls event listeners
+                document.getElementById('heightScale').addEventListener('input', function(e) {
+                    const newZScale = parseFloat(e.target.value);
+                    scene.remove(terrain);
+                    terrain = createTerrainMesh(data, width, height, {
+                        scale: 1,
+                        zScale: newZScale
+                    });
+                    scene.add(terrain);
+                });
+                
+                document.getElementById('wireframe').addEventListener('change', function(e) {
+                    terrain.material.wireframe = e.target.checked;
+                });
+                
+            } catch (error) {
+                document.getElementById('loading').textContent = `Error loading TIFF: ${error.message}`;
+                console.error(error);
+                return;
+            }
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        });
+        
+        // Load TIFF file and extract elevation data
+        async function loadTIFF(fileUrl) {
+            const response = await fetch(fileUrl);
+            const arrayBuffer = await response.arrayBuffer();
+            const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+            const image = await tiff.getImage();
+            
+            const width = image.getWidth();
+            const height = image.getHeight();
+            const data = await image.readRasters();
+            
+            // Find min/max elevation for normalization
+            let min = Infinity, max = -Infinity;
+            for (let i = 0; i < data[0].length; i++) {
+                const val = data[0][i];
+                if (val < min) min = val;
+                if (val > max) max = val;
+            }
+            
+            // Normalize elevation data to 0-1 range
+            const normalizedData = new Float32Array(data[0].length);
+            for (let i = 0; i < data[0].length; i++) {
+                normalizedData[i] = (data[0][i] - min) / (max - min);
+            }
+            
+            console.log(`Loaded TIFF: ${width}x${height}, Elevation range: ${min} to ${max}`);
+            
+            return { 
+                width, 
+                height, 
+                data: normalizedData,
+                minElevation: min,
+                maxElevation: max
+            };
+        }
+        
+        // Create terrain mesh from elevation data
+        function createTerrainMesh(elevationData, width, height, options = {}) {
+            const { scale = 1, zScale = 1 } = options;
+            
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            const colors = [];
+            
+            // Create vertices and colors based on elevation
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = y * width + x;
+                    const elevation = elevationData[idx];
+                    const z = elevation * 3000 * zScale; // Scale the height
+                    
+                    // Position
+                    vertices.push(x * scale, y * scale, z);
+                    
+                    // Color based on elevation
+                    let color;
+                    if (elevation < 0.2) {
+                        color = new THREE.Color(0, 0, 0.5); // Deep water
+                    } else if (elevation < 0.3) {
+                        color = new THREE.Color(0, 0, 1); // Shallow water
+                    } else if (elevation < 0.4) {
+                        color = new THREE.Color(0.8, 0.8, 0.2); // Sand
+                    } else if (elevation < 0.6) {
+                        color = new THREE.Color(0, 0.5, 0); // Grass
+                    } else if (elevation < 0.8) {
+                        color = new THREE.Color(0.3, 0.2, 0.1); // Mountain
+                    } else {
+                        color = new THREE.Color(1, 1, 1); // Snow
+                    }
+                    colors.push(color.r, color.g, color.b);
+                }
+            }
+            
+            // Create indices for faces
+            for (let y = 0; y < height - 1; y++) {
+                for (let x = 0; x < width - 1; x++) {
+                    const a = y * width + x;
+                    const b = y * width + x + 1;
+                    const c = (y + 1) * width + x;
+                    const d = (y + 1) * width + x + 1;
+                    
+                    indices.push(a, b, c);
+                    indices.push(b, d, c);
+                }
+            }
+            
+            // Set geometry attributes
+            geometry.setIndex(indices);
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            // Compute normals for proper lighting
+            geometry.computeVertexNormals();
+            
+            // Material
+            const material = new THREE.MeshPhongMaterial({
+                vertexColors: true,
+                wireframe: document.getElementById('wireframe').checked,
+                flatShading: false,
+                side: THREE.DoubleSide
+            });
+            
+            return new THREE.Mesh(geometry, material);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volcán con Lava - Three.js</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Escena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111122); // Cielo nocturno
+        
+        // Cámara
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+        
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Controles de órbita
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Crear volcán
+        function createVolcano() {
+            const width = 20;
+            const height = 20;
+            const segments = 100;
+            
+            const geometry = new THREE.ConeGeometry(8, 10, segments, 1, true);
+            
+            // Modificar la geometría para crear el cráter
+            const position = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            for (let i = 0; i < position.count; i++) {
+                vertex.fromBufferAttribute(position, i);
+                
+                // Crear cráter en la parte superior
+                if (vertex.y > 4) {
+                    const distanceToCenter = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
+                    if (distanceToCenter < 3) {
+                        vertex.y -= 6 - distanceToCenter; // Forma cóncava para el cráter
+                    }
+                }
+                
+                // Añadir algo de variación a la superficie
+                if (vertex.y > -5) {
+                    const noise = Math.random() * 0.5;
+                    vertex.x += noise;
+                    vertex.z += noise;
+                }
+                
+                position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+            
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x4A3A2B, // Color marrón oscuro para el volcán
+                flatShading: false,
+                wireframe: false
+            });
+            
+            const volcano = new THREE.Mesh(geometry, material);
+            volcano.position.y = -5;
+            volcano.rotation.x = Math.PI;
+            volcano.castShadow = true;
+            volcano.receiveShadow = true;
+            
+            return volcano;
+        }
+        
+        // Añadir lava al cráter
+        function createLava() {
+            const geometry = new THREE.CylinderGeometry(2.5, 3, 1, 32);
+            
+            // Modificar la geometría para que parezca lava burbujeante
+            const position = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            for (let i = 0; i < position.count; i++) {
+                vertex.fromBufferAttribute(position, i);
+                
+                if (vertex.y > 0.4) { // Solo la parte superior
+                    const noise = Math.random() * 0.3;
+                    vertex.x += noise;
+                    vertex.z += noise;
+                    vertex.y += noise * 0.5;
+                }
+                
+                position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+            
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xFF4500, // Color naranja-rojizo para la lava
+                emissive: 0xFF4500,
+                emissiveIntensity: 0.5,
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            
+            const lava = new THREE.Mesh(geometry, material);
+            lava.position.y = 0.5; // Dentro del cráter
+            lava.castShadow = true;
+            
+            return lava;
+        }
+        
+        // Crear partículas de humo
+        function createSmoke() {
+            const particles = 500;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particles * 3);
+            const sizes = new Float32Array(particles);
+            
+            for (let i = 0; i < particles; i++) {
+                const i3 = i * 3;
+                // Posición aleatoria alrededor del cráter
+                positions[i3] = (Math.random() - 0.5) * 6;
+                positions[i3 + 1] = Math.random() * 10 + 2;
+                positions[i3 + 2] = (Math.random() - 0.5) * 6;
+                
+                sizes[i] = Math.random() * 2 + 1;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0x888888,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const smoke = new THREE.Points(geometry, material);
+            smoke.position.y = -5;
+            
+            return smoke;
+        }
+        
+        // Añadir elementos a la escena
+        const volcano = createVolcano();
+        scene.add(volcano);
+        
+        const lava = createLava();
+        volcano.add(lava); // La lava es hija del volcán
+        
+        const smoke = createSmoke();
+        volcano.add(smoke);
+        
+        // Crear plano del terreno
+        const groundGeometry = new THREE.PlaneGeometry(100, 100, 10, 10);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x3A5F0B,
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -5;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Iluminación
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        
+        // Luz de la lava
+        const lavaLight = new THREE.PointLight(0xFF4500, 2, 20);
+        lavaLight.position.set(0, 3, 0);
+        volcano.add(lavaLight);
+        
+        // Neblina
+        scene.fog = new THREE.FogExp2(0x111122, 0.02);
+        
+        // Manejar redimensionamiento
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Animación
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Animación de la lava
+            time += 0.05;
+            lava.position.y = 0.5 + Math.sin(time) * 0.1;
+            lavaLight.intensity = 1.5 + Math.sin(time * 2) * 0.5;
+            
+            // Animación del humo
+            const positions = smoke.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i + 1] += 0.02; // Mover humo hacia arriba
+                
+                // Reiniciar partículas que salen demasiado
+                if (positions[i + 1] > 15) {
+                    positions[i] = (Math.random() - 0.5) * 6;
+                    positions[i + 1] = Math.random() * 2;
+                    positions[i + 2] = (Math.random() - 0.5) * 6;
+                }
+            }
+            smoke.geometry.attributes.position.needsUpdate = true;
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

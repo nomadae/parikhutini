@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Mountain</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+        
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Add orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Create mountain terrain
+        function createMountain() {
+            const width = 20;
+            const height = 20;
+            const widthSegments = 100;
+            const heightSegments = 100;
+            
+            // Create a flat plane geometry
+            const geometry = new THREE.PlaneGeometry(width, height, widthSegments, heightSegments);
+            
+            // Displace vertices to create mountain shape
+            const position = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            for (let i = 0; i < position.count; i++) {
+                vertex.fromBufferAttribute(position, i);
+                
+                // Calculate distance from center
+                const distance = Math.sqrt(vertex.x * vertex.x + vertex.y * vertex.y);
+                
+                // Create mountain shape using a combination of noise and distance
+                const noise = Math.random() * 0.01;
+                const height = Math.max(0, 3 * Math.exp(-distance * 0.9) + noise);
+                
+                vertex.z = height;
+                position.setZ(i, vertex.z);
+            }
+            
+            // Update normals for proper lighting
+            geometry.computeVertexNormals();
+            
+            // Create material
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x5C4033, // Brown base color
+                flatShading: false,
+                side: THREE.DoubleSide,
+                wireframe: false
+            });
+            
+            // Create mesh
+            const mountain = new THREE.Mesh(geometry, material);
+            mountain.rotation.x = -Math.PI / 2;
+            mountain.position.y = -2;
+            mountain.receiveShadow = true;
+            mountain.castShadow = true;
+            
+            return mountain;
+        }
+        
+        // Add mountain to scene
+        const mountain = createMountain();
+        scene.add(mountain);
+        
+        // Add snow to the top of the mountain
+        function addSnow() {
+            const snowGeometry = new THREE.PlaneGeometry(20, 20, 100, 100);
+            const snowPosition = snowGeometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            for (let i = 0; i < snowPosition.count; i++) {
+                vertex.fromBufferAttribute(snowPosition, i);
+                
+                // Only add snow to higher elevations
+                if (vertex.z > 1.5) {
+                    vertex.z += 0.2 + Math.random() * 0.1;
+                } else {
+                    vertex.z = -100; // Move vertices below snow line far down
+                }
+                
+                snowPosition.setZ(i, vertex.z);
+            }
+            
+            snowGeometry.computeVertexNormals();
+            
+            const snowMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                flatShading: false,
+                side: THREE.DoubleSide,
+                wireframe: false
+            });
+            
+            const snow = new THREE.Mesh(snowGeometry, snowMaterial);
+            snow.rotation.x = -Math.PI / 2;
+            snow.position.y = -1.99; // Slightly above the mountain
+            snow.receiveShadow = true;
+            
+            return snow;
+        }
+        
+        scene.add(addSnow());
+        
+        // Add ground plane
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x3A5F0B, // Green grass color
+            side: THREE.DoubleSide
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        // Add fog for depth
+        scene.fog = new THREE.FogExp2(0x87CEEB, 0.02);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
