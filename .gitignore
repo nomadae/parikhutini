@@ -2,3 +2,6 @@ node_modules
 dist
 .env
 venv/
+data/heightmap.json
+volcano_heightmap.npy
+__pycache__/

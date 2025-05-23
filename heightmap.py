@@ -1,6 +1,9 @@
 import numpy as np
 from osgeo import gdal
 import matplotlib.pyplot as plt
+import matplotlib
+import json
+matplotlib.use('qt5agg')
 
 def load_dem_to_heightmap(tiff_path, output_npy=None, output_png=None, normalize=True):
     """
@@ -53,14 +56,16 @@ def load_dem_to_heightmap(tiff_path, output_npy=None, output_png=None, normalize
 # Example usage
 if __name__ == "__main__":
     # Replace with your TIFF file path
-    dem_file = "volcano_dem.tif"
+    dem_file = "./data/mde/tancitaro_mde.tif"
     
     # Process the DEM
     heightmap = load_dem_to_heightmap(
         dem_file,
         output_npy="volcano_heightmap.npy",
-        output_png="volcano_heightmap.png"
+        output_png="volcano_heightmap.png", 
+        # normalize=False
     )
+    json.dump(heightmap.tolist(), open("./data/heightmap.json", "w"))
     
     print(f"Heightmap shape: {heightmap.shape}")
     print(f"Min elevation: {np.min(heightmap):.2f}")
