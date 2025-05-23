@@ -268,6 +268,7 @@ async function waitForVectorSourceReady() {
       featureButton.data = features[i].values_.index;
       featureButton.onclick = function(e) {
         map.getView().setCenter(features[i].getGeometry().getCoordinates());
+        map.getView().setZoom(14);
       }
       leftPanelContainer.appendChild(featureButton);
       keys.push(features[i].values_.index);
