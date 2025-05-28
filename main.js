@@ -151,6 +151,9 @@ map.on('click', function (evt) {
       //   title: 'Welcome to OpenLayers',
       // });
       // popover.show();
+      console.log(fl[0].getGeometry().getCoordinates());
+      console.log(fl[0].values_.index);
+
     }
   } catch (e) {
       if (e instanceof TypeError) {
@@ -225,3 +228,67 @@ map.getTargetElement().addEventListener('pointerleave', function () {
   currentFeature = undefined;
   info.style.visibility = 'hidden';
 });
+
+////////////////////////////////////////////
+////          Panel Controls           /////
+////////////////////////////////////////////
+
+const leftPanelContainer = document.getElementById('pane');
+
+const vectorSource = layer.getSource();
+let features;
+const keys = [];
+// vectorSource.on('change', function(evt){
+//     var source=evt.target;
+//     if(source.getState() === 'ready'){
+//         features = vectorSource.getFeatures();
+        
+//         for (let i=0; i < features.length; i++) {
+//         //  keys.push(layerFeatures[i].get("index"));
+//           let featureButton = document.createElement('button');
+//           featureButton.innerHTML = features[i].values_.nombre;
+//           featureButton.data = features[i].values_.index;
+//           featureButton.onclick = function(e) {
+//             map.getView().setCenter(features[i].getGeometry().getCoordinates());
+//           }
+//           leftPanelContainer.appendChild(featureButton);
+//           keys.push(features[i].values_.index);
+//         }
+//         console.log(keys[0])
+//         // console.info(vectorSource.getFeatures());
+//     }
+// });
+
+async function waitForChangeEvent(element) {
+  return new Promise(resolve => {
+    element.addEventListener('change', () => {
+      resolve();
+    }, {once: true});
+  });
+}
+
+async function waitForVectorSourceReady() {
+  await waitForChangeEvent(vectorSource);
+  // console.log('Change occurred!');
+  if (vectorSource.getState() === 'ready') {
+    features = vectorSource.getFeatures();
+        
+    for (let i=0; i < features.length; i++) {
+    //  keys.push(layerFeatures[i].get("index"));
+      let featureButton = document.createElement('button');
+      featureButton.innerHTML = features[i].values_.nombre;
+      featureButton.data = features[i].values_.index;
+      featureButton.onclick = function(e) {
+        map.getView().setCenter(features[i].getGeometry().getCoordinates());
+        map.getView().setZoom(14);
+      }
+      leftPanelContainer.appendChild(featureButton);
+      keys.push(features[i].values_.index);
+    }
+  }
+  // console.log(keys[0])
+  // console.info(vectorSource.getFeatures());
+}
+
+waitForVectorSourceReady();
+
