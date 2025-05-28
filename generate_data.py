@@ -28,7 +28,7 @@ print(gdf.head())
 gdf.plot()
 plt.show()
 
-gdf = gdf.to_crs(epsg=3857)
+# gdf = gdf.to_crs(epsg=3857)
 
 gdf.to_file('./data/all.json', driver="GeoJSON", index=True)
 

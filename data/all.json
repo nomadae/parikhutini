@@ -1,7 +1,7 @@
 {
 "type": "FeatureCollection",
 "name": "all",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
 { "type": "Feature", "properties": { "index": 0, "nombre": "LAVAS 1", "longitud": -102.709167, "latitud": 19.34, "obs": "LAVAS (C.EL  GUACO)" }, "geometry": { "type": "Point", "coordinates": [ -102.709167, 19.34 ] } },
 { "type": "Feature", "properties": { "index": 1, "nombre": "LAVAS 2", "longitud": -102.6975, "latitud": 19.351111, "obs": "LAVAS (C.LA  LAGUNITA)" }, "geometry": { "type": "Point", "coordinates": [ -102.6975, 19.351111 ] } },
