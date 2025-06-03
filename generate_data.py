@@ -6,19 +6,19 @@ import matplotlib.pyplot as plt
 # matplotlib.use('qt5agg')
 # %matplotlib inline
 
-dbf = DBF('./data/ce/ce_wgs.dbf', load=True, encoding="utf-8")
+dbf = DBF('./data/ce/ce_epsg3857.dbf', load=True, encoding="utf-8")
 df = pd.DataFrame(iter(dbf))
 df_localized = df[df['LONGI']!=0]
 # df_localized = df_localized[df_localized["Nombre"].str.startswith('V.')]
 
-df_geo = df_localized[['Nombre', 'LONGI', 'Latit', 'observacio']]
+df_geo = df_localized[['Nombre', 'LONGI', 'Latit', 'observacio', 'x_1', 'y_1']]
 
-df_geo = df_geo.rename(columns={'Nombre':'nombre', 'LONGI': 'longitud', 'Latit':'latitud', 'observacio': 'obs'})
+df_geo = df_geo.rename(columns={'Nombre':'nombre', 'LONGI': 'longitud', 'Latit':'latitud', 'observacio': 'obs', 'x_1': 'x', 'y_1': 'y'})
 
 gdf = geopandas.GeoDataFrame(
     df_geo,
-    geometry=geopandas.points_from_xy(df_geo.longitud, df_geo.latitud),
-    crs="EPSG:4326",
+    geometry=geopandas.points_from_xy(df_geo.x, df_geo.y),
+    crs="EPSG:3857",
     # crs="EPSG:3347"
 )
 
