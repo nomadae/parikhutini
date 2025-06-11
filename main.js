@@ -1,4 +1,3 @@
-import './style.css';
 import {Map, Overlay, View} from 'ol';
 import {toLonLat, useGeographic} from 'ol/proj.js';
 import Feature from 'ol/Feature.js';
@@ -13,6 +12,13 @@ import GeoJSON from 'ol/format/GeoJSON.js'
 // import {get as getProjection} from 'ol/proj.js';
 // import proj4 from 'proj4/dist/proj4';
 // import proj from 'ol/proj';
+
+import './style.css';
+import icon4 from './src/img/icon4.png';
+import icon3 from './src/img/icon3.png';
+import lava from './src/img/Lava.png';
+import volcan from './src/img/volcan.png';
+import cerro from './src/img/cerro.png';
 
 
 ////////////////////////////////////////////
@@ -76,8 +82,10 @@ const layer = new VectorLayer({
     image: new Icon({
       anchor: [0.5, 1],
       crossOrigin: 'anonymous',
-      src: 'icon4.png',
-      // color: '#75FB4C'
+      src: cerro,
+      color: '#fff',
+      width: 50,
+      height: 70,
     })
   })
 });
@@ -284,6 +292,7 @@ async function waitForVectorSourceReady() {
       }
       leftPanelContainer.appendChild(featureButton);
       keys.push(features[i].values_.index);
+      leftPanelContainer.appendChild(document.createElement('br'));
     }
   }
   // console.log(keys[0])
@@ -291,4 +300,71 @@ async function waitForVectorSourceReady() {
 }
 
 waitForVectorSourceReady();
+
+
+let selectedFeature;
+map.on('click', function (evt) {
+  // const coordinate = evt.coordinate;
+  if (currentFeature){
+    clearIcon();
+  }
+  var fl = map.forEachFeatureAtPixel(evt.pixel,
+    function(feature, layer) {
+      return [feature, layer];
+  });
+  try{
+
+    let clickedFeature = fl[0];
+    selectedFeature = clickedFeature;
+    if(clickedFeature) {
+      console.log(clickedFeature);
+      clickedFeature.setStyle(new Style({
+        image: new Icon({
+          anchor: [0.5, 1],
+          crossOrigin: 'anonymous',
+          src: volcan,
+          //color: '#fff',
+          width: 60,
+          height: 75,
+          }),
+      }));
+      // clickedFeature.setStyle(new Style({}));
+    }
+  } catch (e) {
+      console.error(e);
+      // if (e instanceof TypeError) {
+      //   // console.error(e);
+        
+      // }
+    }
+});
+
+function clearIcon() {
+  // console.log(selectedFeature);
+  if (selectedFeature) {
+    selectedFeature.setStyle(new Style({
+        image: new Icon({
+        anchor: [0.5, 1],
+        crossOrigin: 'anonymous',
+        src: cerro,
+        color: '#fff',
+        width: 50,
+        height: 70,
+        })
+      }));
+  }
+  // await waitForChangeEvent(vectorSource);
+  // if (vectorSource.getState() == 'ready') {
+  //   features = vectorSource.getFeatures();
+
+    // for (let i=0; i < features.length; i++) {
+    //   features[i].setStyle(new Style ({
+    //     image: new Icon({
+    //       anchor: [0.5, 1],
+    //       crossOrigin: 'anonymous',
+    //       src: icon3
+    //     })
+    //   })
+    // )};
+}
 
