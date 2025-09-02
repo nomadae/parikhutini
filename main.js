@@ -241,7 +241,8 @@ map.getTargetElement().addEventListener('pointerleave', function () {
 ////          Panel Controls           /////
 ////////////////////////////////////////////
 
-const leftPanelContainer = document.getElementById('pane');
+const leftPanelContainer = document.getElementById('municipios');
+const municipalityNames = new Set();
 
 const vectorSource = layer.getSource();
 let features;
@@ -282,6 +283,9 @@ async function waitForVectorSourceReady() {
     features = vectorSource.getFeatures();
         
     for (let i=0; i < features.length; i++) {
+      municipalityNames.add(features[i].values_.municipio);
+
+
     //  keys.push(layerFeatures[i].get("index"));
       let featureButton = document.createElement('button');
       featureButton.innerHTML = features[i].values_.nombre;
@@ -295,6 +299,8 @@ async function waitForVectorSourceReady() {
       leftPanelContainer.appendChild(document.createElement('br'));
     }
   }
+  console.log(municipalityNames)
+  debugger
   // console.log(keys[0])
   // console.info(vectorSource.getFeatures());
 }

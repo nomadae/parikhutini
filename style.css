@@ -16,11 +16,11 @@ html, body {
   top: 0;
   bottom: 0;
   right: 0;
-  width: 20%;
-  background: ghostwhite;
-  border-left: 5px solid lightsteelblue;
+  width: 25%;
+  background-color: rgba(var(--bs-dark-rgb))!important;
+  border-left: 5px solid rgb(100,100,100);
   box-sizing: border-box;
-  padding: 0 20px;
+  padding: 0 10px;
   overflow: auto;
 }
 
