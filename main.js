@@ -241,12 +241,10 @@ map.getTargetElement().addEventListener('pointerleave', function () {
 ////          Panel Controls           /////
 ////////////////////////////////////////////
 
-const leftPanelContainer = document.getElementById('municipios');
-const municipalityNames = new Set();
+const collapseMuns = document.getElementById('lista-municipios');
 
 const vectorSource = layer.getSource();
 let features;
-const keys = [];
 // vectorSource.on('change', function(evt){
 //     var source=evt.target;
 //     if(source.getState() === 'ready'){
@@ -276,6 +274,7 @@ async function waitForChangeEvent(element) {
   });
 }
 
+let mun_volcanoe_list = {};
 async function waitForVectorSourceReady() {
   await waitForChangeEvent(vectorSource);
   // console.log('Change occurred!');
@@ -283,30 +282,92 @@ async function waitForVectorSourceReady() {
     features = vectorSource.getFeatures();
         
     for (let i=0; i < features.length; i++) {
-      municipalityNames.add(features[i].values_.municipio);
+      let mun = features[i].values_.municipio;
+      let volcanoName = features[i].values_.nombre;
+      let layerIndex = features[i].values_.index;
+      let coord = features[i].getGeometry().getCoordinates();
 
-
-    //  keys.push(layerFeatures[i].get("index"));
-      let featureButton = document.createElement('button');
-      featureButton.innerHTML = features[i].values_.nombre;
-      featureButton.data = features[i].values_.index;
-      featureButton.onclick = function(e) {
-        map.getView().setCenter(features[i].getGeometry().getCoordinates());
-        map.getView().setZoom(14);
+      if (volcanoName && mun) {
+        mun_volcanoe_list[mun] += [volcanoName + 
+                                  "#" + layerIndex + 
+                                  "#" + `${coord[0]}&${coord[1]}` +  
+                                  ","];
       }
-      leftPanelContainer.appendChild(featureButton);
-      keys.push(features[i].values_.index);
-      leftPanelContainer.appendChild(document.createElement('br'));
     }
   }
-  console.log(municipalityNames)
-  debugger
-  // console.log(keys[0])
-  // console.info(vectorSource.getFeatures());
+  let orderedVolcanoesByMunName = {};
+  console.log(Object.keys(mun_volcanoe_list).length);
+  for (let i=0; i < Object.keys(mun_volcanoe_list).length; i++) {
+    let mun = Object.keys(mun_volcanoe_list)[i];
+    mun_volcanoe_list[mun] = mun_volcanoe_list[mun]
+    .replace("undefined", "")
+    .slice(0, -1)
+    .trim()
+    .split(',');
+  }
+  Object.keys(mun_volcanoe_list).sort().forEach((v, i) => {
+    orderedVolcanoesByMunName[v] = mun_volcanoe_list[v];
+  })
+  console.log(orderedVolcanoesByMunName);
+
+  for (let i=0; i<Object.keys(orderedVolcanoesByMunName).length; i++){
+
+    let currentMun = Object.keys(orderedVolcanoesByMunName)[i];
+    let currentVolcanoes = orderedVolcanoesByMunName[currentMun];
+
+    let collapseListGroup = document.createElement('button');
+    collapseListGroup.innerHTML = Object.keys(orderedVolcanoesByMunName)[i];
+    collapseListGroup.setAttribute('class', "list-group-item list-group-item-dark list-group-item-action");
+    collapseListGroup.setAttribute('data-bs-toggle', "collapse");
+    collapseListGroup.setAttribute('role', "button");
+    collapseListGroup.setAttribute('data-bs-target', `#munCollapse_${i}`);
+    collapseListGroup.setAttribute('aria-expanded', "false");
+    collapseListGroup.setAttribute('aria-controls', `#munCollapse_${i}`);
+    
+    let collapseContent = document.createElement('div');
+    collapseContent.setAttribute("class", "collapse");
+    collapseContent.setAttribute('id', `munCollapse_${i}`);
+    collapseContent.setAttribute("data-bs-parent", "#lista-municipios");
+
+    currentVolcanoes.forEach(volcanoe => {      
+      let vbtn = document.createElement('button');
+      vbtn.setAttribute("type", "button");
+      vbtn.setAttribute("class", "btn");
+      vbtn.style.padding = "0";
+      let volcanoNameSpan = document.createElement('span');
+
+      let [mun, layerIndex, coords] = volcanoe.split('#');
+      
+      let coordsArray = new Array();
+      coordsArray.push(Number(coords.split("&")[0]));
+      coordsArray.push(Number(coords.split("&")[1]));
+
+      vbtn.setAttribute("data-layer-index", layerIndex);
+      vbtn.onclick = (e) => {
+        if (e.target.tagName === "SPAN") {
+          console.log(e.target.parentElement.dataset.layerIndex);
+        }
+        else {
+          console.log(e.target.dataset.layerIndex);
+        }
+        map.getView().setCenter(coordsArray);
+        map.getView().setZoom(14);
+
+        // popup.setPosition(coordsArray);
+      }
+      volcanoNameSpan.innerHTML = mun;
+      volcanoNameSpan.setAttribute('class', "badge rounded-pill text-bg-secondary");
+
+      vbtn.appendChild(volcanoNameSpan);
+      collapseContent.appendChild(vbtn);
+    });
+
+    collapseMuns.appendChild(collapseListGroup);
+    collapseMuns.appendChild(collapseContent);
+  }
 }
 
 waitForVectorSourceReady();
-
 
 let selectedFeature;
 map.on('click', function (evt) {
@@ -319,7 +380,6 @@ map.on('click', function (evt) {
       return [feature, layer];
   });
   try{
-
     let clickedFeature = fl[0];
     selectedFeature = clickedFeature;
     if(clickedFeature) {

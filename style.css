@@ -16,7 +16,7 @@ html, body {
   top: 0;
   bottom: 0;
   right: 0;
-  width: 25%;
+  width: 20%;
   background-color: rgba(var(--bs-dark-rgb))!important;
   border-left: 5px solid rgb(100,100,100);
   box-sizing: border-box;
@@ -81,4 +81,9 @@ html, body {
   transform: translateX(3%);
   visibility: hidden;
   pointer-events: none;
+}
+
+.list-group .list-group-item button {
+  margin: 0;
+  padding: 0;
 }
