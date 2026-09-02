@@ -49,6 +49,7 @@
     <div id="info">3D Terrain Viewer</div>
     <div id="loading">Loading TIFF data and initializing 3D viewer...</div>
     <div id="controls">
+        <label>DEM: <select id="demSelect"></select></label>
         <label>Height Scale: <input type="range" id="heightScale" min="0.001" max="0.1" step="0.001" value="0.01"></label>
         <label>Wireframe: <input type="checkbox" id="wireframe"></label>
     </div>
@@ -68,6 +69,17 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+        // DEM catalog: selectable GeoTIFF sources, preselectable via ?mde=<slug|name>
+        const DEMS = [
+            { name: 'Tancítaro', slug: 'tancitaro', path: './data/mde/tancitaro_mde.tif' },
+            { name: 'Iztaccíhuatl', slug: 'ixta', path: './data/mde/ixta/mde_ixta14.tif' },
+            { name: 'Nevado de Toluca', slug: 'nt', path: './data/mde/nt/mde_nt.tif' },
+            { name: 'Pico de Orizaba', slug: 'orizaba', path: './data/mde/PicodeOrizaba/mde_po14.tif' },
+            { name: 'Popocatépetl', slug: 'popo', path: './data/mde/Popocatepetl/mde_popoca14.tif' },
+        ];
+        const stripDiacritics = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const mdeParam = stripDiacritics(new URLSearchParams(location.search).get('mde') || '').toLowerCase();
+        const initialDem = DEMS.find(d => d.slug === mdeParam || stripDiacritics(d.name).toLowerCase() === mdeParam) || DEMS[0];
         // Main application
         document.addEventListener('DOMContentLoaded', async function() {
             // Scene setup
@@ -97,57 +109,72 @@
             directionalLight.position.set(1, 1, 1);
             directionalLight.castShadow = true;
             scene.add(directionalLight);
+            scene.add(new THREE.AxesHelper(50));
             
-            // Load TIFF data
-            try {
-                const tiffUrl = './data/mde/tancitaro_mde.tif'; // Replace with your TIFF file URL
-                const { width, height, data } = await loadTIFF(tiffUrl);
-                
-                // Remove loading message
-                document.getElementById('loading').remove();
-                
-                // Create terrain
-                let terrain = createTerrainMesh(data, width, height, {
-                    scale: 1,       // Horizontal scale
-                    zScale: 0.01    // Vertical scale (height)
-                });
+            // DEM selector
+            const demSelect = document.getElementById('demSelect');
+            DEMS.forEach(dem => {
+                const option = document.createElement('option');
+                option.value = dem.path;
+                option.textContent = dem.name;
+                demSelect.appendChild(option);
+            });
+            demSelect.value = initialDem.path;
+
+            const loading = document.getElementById('loading');
+            let terrain = null;
+            let data = null, width = 0, height = 0;
+            let zScale = 0.01;
+            let loadToken = 0;
+
+            function showLoadError(error) {
+                loading.style.display = 'block';
+                loading.textContent = `Error loading TIFF: ${error.message}`;
+                console.error(error);
+            }
+
+            async function loadDEM(tiffUrl) {
+                const token = ++loadToken;
+                loading.style.display = 'block';
+                loading.textContent = `Loading ${tiffUrl} ...`;
+                const loaded = await loadTIFF(tiffUrl);
+                if (token !== loadToken) return;
+                data = loaded.data;
+                width = loaded.width;
+                height = loaded.height;
+
+                const mesh = createTerrainMesh(data, width, height, { scale: 1, zScale });
+                if (token !== loadToken) return;
+
+                if (terrain) scene.remove(terrain);
+                terrain = mesh;
                 scene.add(terrain);
-                
-                // Center camera on terrain
-                const centerX = (width * 1) / 2;
-                const centerY = (height * 1) / 2;
+
+                loading.style.display = 'none';
+
+                const centerX = width / 2;
+                const centerY = height / 2;
                 camera.position.set(centerX, centerY, Math.max(width, height));
                 controls.target.set(centerX, centerY, 0);
-                
-                // Add grid helper
-                const gridHelper = new THREE.GridHelper(Math.max(width, height) * 1.2, 20);
-                //scene.add(gridHelper);
-                
-                // Add axes helper
-                const axesHelper = new THREE.AxesHelper(50);
-                scene.add(axesHelper);
-                
-                // Controls event listeners
-                document.getElementById('heightScale').addEventListener('input', function(e) {
-                    const newZScale = parseFloat(e.target.value);
-                    scene.remove(terrain);
-                    terrain = createTerrainMesh(data, width, height, {
-                        scale: 1,
-                        zScale: newZScale
-                    });
-                    scene.add(terrain);
-                });
-                
-                document.getElementById('wireframe').addEventListener('change', function(e) {
-                    terrain.material.wireframe = e.target.checked;
-                });
-                
-            } catch (error) {
-                document.getElementById('loading').textContent = `Error loading TIFF: ${error.message}`;
-                console.error(error);
-                return;
             }
-            
+
+            demSelect.addEventListener('change', function() {
+                loadDEM(this.value).catch(showLoadError);
+            });
+
+            document.getElementById('heightScale').addEventListener('input', function(e) {
+                zScale = parseFloat(e.target.value);
+                if (!terrain) return;
+                scene.remove(terrain);
+                terrain = createTerrainMesh(data, width, height, { scale: 1, zScale });
+                scene.add(terrain);
+            });
+
+            document.getElementById('wireframe').addEventListener('change', function(e) {
+                if (terrain) terrain.material.wireframe = e.target.checked;
+            });
+
+            loadDEM(initialDem.path).catch(showLoadError);
             // Animation loop
             function animate() {
                 requestAnimationFrame(animate);
@@ -174,19 +201,24 @@
             const width = image.getWidth();
             const height = image.getHeight();
             const data = await image.readRasters();
-            
-            // Find min/max elevation for normalization
+            const rawNoData = image.getGDALNoData();
+            const nodata = (rawNoData === null || rawNoData === undefined) ? null : Number(rawNoData);
+
+            // Find min/max elevation for normalization, ignoring NoData cells
             let min = Infinity, max = -Infinity;
             for (let i = 0; i < data[0].length; i++) {
                 const val = data[0][i];
+                if (nodata !== null && val === nodata) continue;
                 if (val < min) min = val;
                 if (val > max) max = val;
             }
-            
-            // Normalize elevation data to 0-1 range
+            const range = max - min;
+
+            // Normalize elevation data to 0-1 range (NoData cells flatten to 0)
             const normalizedData = new Float32Array(data[0].length);
             for (let i = 0; i < data[0].length; i++) {
-                normalizedData[i] = (data[0][i] - min) / (max - min);
+                const val = data[0][i];
+                normalizedData[i] = (nodata !== null && val === nodata) || range === 0 ? 0 : (val - min) / range;
             }
             
             console.log(`Loaded TIFF: ${width}x${height}, Elevation range: ${min} to ${max}`);
