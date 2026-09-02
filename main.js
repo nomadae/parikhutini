@@ -275,6 +275,7 @@ async function waitForChangeEvent(element) {
 }
 
 let mun_volcanoe_list = {};
+let activeVolcanoSpan = null;
 async function waitForVectorSourceReady() {
   await waitForChangeEvent(vectorSource);
   // console.log('Change occurred!');
@@ -308,7 +309,7 @@ async function waitForVectorSourceReady() {
   Object.keys(mun_volcanoe_list).sort().forEach((v, i) => {
     orderedVolcanoesByMunName[v] = mun_volcanoe_list[v];
   })
-  console.log(orderedVolcanoesByMunName);
+  // console.log(orderedVolcanoesByMunName);
 
   for (let i=0; i<Object.keys(orderedVolcanoesByMunName).length; i++){
 
@@ -350,13 +351,18 @@ async function waitForVectorSourceReady() {
         else {
           console.log(e.target.dataset.layerIndex);
         }
+        if (activeVolcanoSpan && activeVolcanoSpan !== volcanoNameSpan) {
+          activeVolcanoSpan.setAttribute("class", "badge rounded-pill bg-secondary");
+        }
+        volcanoNameSpan.setAttribute("class", "badge rounded-pill bg-primary");
+        activeVolcanoSpan = volcanoNameSpan;
         map.getView().setCenter(coordsArray);
         map.getView().setZoom(14);
 
         // popup.setPosition(coordsArray);
       }
       volcanoNameSpan.innerHTML = mun;
-      volcanoNameSpan.setAttribute('class', "badge rounded-pill text-bg-secondary");
+      volcanoNameSpan.setAttribute('class', "badge rounded-pill bg-secondary");
 
       vbtn.appendChild(volcanoNameSpan);
       collapseContent.appendChild(vbtn);
