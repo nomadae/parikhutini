@@ -53,14 +53,21 @@
         <label>Wireframe: <input type="checkbox" id="wireframe"></label>
     </div>
 
-    <!-- Three.js library -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <!-- GeoTIFF.js library for reading TIFF files -->
-    <script src="https://cdn.jsdelivr.net/npm/geotiff@2.0.4/dist-browser/geotiff.js"></script>
-    <!-- OrbitControls for camera interaction -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+      }
+    }
+    </script>
 
-    <script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
         // Main application
         document.addEventListener('DOMContentLoaded', async function() {
             // Scene setup
@@ -78,7 +85,7 @@
             document.body.appendChild(renderer.domElement);
             
             // Controls
-            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            const controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             
