@@ -6,3 +6,6 @@ data/heightmap.json
 volcano_heightmap.npy
 volcano_heightmap.png
 __pycache__/
+
+# Large DEM rasters: kept local, served at deploy time (strategy TBD)
+data/mde/
