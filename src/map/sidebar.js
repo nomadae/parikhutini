@@ -34,6 +34,7 @@ export function buildMunicipalitySidebar(map, layer) {
     const features = vectorSource.getFeatures();
 
     const mun_volcanoe_list = {};
+    let activeVolcanoSpan = null;
     for (const feature of features) {
       const mun = feature.values_.municipio;
       const volcanoName = feature.values_.nombre;
@@ -81,18 +82,29 @@ export function buildMunicipalitySidebar(map, layer) {
         vbtn.setAttribute('class', 'btn');
         vbtn.style.padding = '0';
 
-        const [mun, layerIndex, coords] = volcanoe.split('#');
+        // NOTE: the first token of the encoded entry is the volcano NAME
+        // (the municipality only names the containing group).
+        const [, layerIndex, coords] = volcanoe.split('#');
         const coordsArray = coords.split('&').map(Number);
+
+        const volcanoNameSpan = document.createElement('span');
+        volcanoNameSpan.innerHTML = volcanoe.split('#')[0];
+        volcanoNameSpan.setAttribute('class', 'badge rounded-pill bg-secondary');
 
         vbtn.setAttribute('data-layer-index', layerIndex);
         vbtn.onclick = () => {
+          // Keep the highlight on the last clicked volcano only.
+          if (activeVolcanoSpan && activeVolcanoSpan !== volcanoNameSpan) {
+            activeVolcanoSpan.setAttribute('class', 'badge rounded-pill bg-secondary');
+          }
+          volcanoNameSpan.setAttribute('class', 'badge rounded-pill bg-primary');
+          activeVolcanoSpan = volcanoNameSpan;
+
+          // Center the map at the selected volcano coordinates.
           map.getView().setCenter(coordsArray);
           map.getView().setZoom(14);
         };
 
-        const volcanoNameSpan = document.createElement('span');
-        volcanoNameSpan.innerHTML = mun;
-        volcanoNameSpan.setAttribute('class', 'badge rounded-pill text-bg-secondary');
         vbtn.appendChild(volcanoNameSpan);
         collapseContent.appendChild(vbtn);
       });
