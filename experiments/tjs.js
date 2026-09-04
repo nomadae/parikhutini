@@ -9,7 +9,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Load heightmap data
-fetch('./data/heightmap.json')
+fetch('../data/heightmap.json')
   .then(response => response.json())
   .then(heightmap => {
     const width = heightmap[0].length;
