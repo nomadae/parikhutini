@@ -4,7 +4,10 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node tests/tiff-decode.test.mjs",
+    "test:e2e": "node tests/dem-inspector.e2e.mjs"
   },
   "devDependencies": {
     "vite": "^8.2.2"

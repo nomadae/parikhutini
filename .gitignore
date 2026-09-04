@@ -9,3 +9,6 @@ __pycache__/
 
 # Large DEM rasters: kept local, served at deploy time (strategy TBD)
 data/mde/
+
+# E2E screenshot artifacts
+tests/*.png

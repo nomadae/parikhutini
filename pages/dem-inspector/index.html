@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de MDE - Modelo Digital de Elevación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .upload-section {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #3498db;
+            border-radius: 5px;
+        }
+        .info-panel {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .visualization {
+            position: relative; /* ancla del panel de perfil flotante */
+            display: flex;
+            margin: 20px 0;
+        }
+        .canvas-container {
+            flex: 1;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #elevationCanvas {
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: 100%;  /* nunca más ancho que el contenedor */
+            max-height: 75vh; /* rásteres altos caben completos, sin distorsión */
+            margin: 0 auto;   /* centrado cuando domina max-height */
+        }
+        .elevation-profile {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 300px;
+            max-width: calc(100% - 24px); /* no desborda en ventanas estrechas */
+            background: white;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+        }
+        .elevation-profile h4 {
+            margin: 0 0 8px 0;
+        }
+        #profileCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        #profileInfo,
+        #profileRange {
+            margin: 6px 0 0 0;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+        .legend {
+            display: flex;
+            height: 30px;
+            margin: 10px 0;
+            background: linear-gradient(90deg, blue, cyan, green, yellow, orange, red, maroon);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-box {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Visualizador de Modelo Digital de Elevación (MDE)</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="tiffFile" accept=".tiff,.tif" style="display: none;">
+            <button onclick="document.getElementById('tiffFile').click()">Seleccionar archivo TIFF MDE</button>
+            <p id="fileName">No se ha seleccionado ningún archivo</p>
+        </div>
+
+        <div class="info-panel">
+            <h3>Información del MDE</h3>
+            <div id="fileInfo">Cargando información...</div>
+        </div>
+
+        <div class="stats" id="statsContainer">
+            <!-- Las estadísticas se generarán dinámicamente -->
+        </div>
+
+        <div class="visualization">
+            <div class="canvas-container">
+                <h4>Visualización 2D del Terreno</h4>
+                <canvas id="elevationCanvas" width="500" height="400"></canvas>
+                <div class="legend">
+                    <span style="float: left;">Baja elevación</span>
+                    <span style="float: right;">Alta elevación</span>
+                </div>
+            </div>
+            
+            <div class="elevation-profile">
+                <h4>Perfil de Elevación</h4>
+                <canvas id="profileCanvas" width="400" height="200"></canvas>
+                <div id="profileInfo">Selecciona puntos en el mapa para ver el perfil</div>
+                <div id="profileRange"></div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Herramientas de Análisis</h3>
+            <button onclick="calculateSlope()">Calcular Pendientes</button>
+            <button onclick="calculateAspect()">Calcular Orientación</button>
+            <button onclick="findHighestPoint()">Punto Más Alto</button>
+            <button onclick="findLowestPoint()">Punto Más Bajo</button>
+            <div id="analysisResults"></div>
+        </div>
+    </div>
+
+    <!-- Vendored TIFF decoder (classic script: defines window.UTIF before the app module) -->
+    <script src="../../src/tiff/vendor/UTIF.js"></script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
