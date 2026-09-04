@@ -6,13 +6,27 @@ export function buildMunicipalitySidebar(map, layer) {
   const collapseMuns = document.getElementById('lista-municipios');
   const vectorSource = layer.getSource();
 
-  // Resolve only when the source finished loading its GeoJSON features.
+  // Resolve when the source has actually loaded its GeoJSON features.
+  // NOTE: getState() can already be 'ready' before the first fetch completes,
+  // so we wait for features to exist or for the source's load events.
   function sourceReady(source) {
     return new Promise((resolve) => {
-      if (source.getState() === 'ready') return resolve();
-      source.on('change', () => {
-        if (source.getState() === 'ready') resolve();
-      });
+      if (source.getFeatures().length > 0) return resolve();
+      const onLoad = () => {
+        cleanup();
+        resolve();
+      };
+      const cleanup = () => {
+        source.un('featuresloadend', onLoad);
+        source.un('featuresloaderror', onLoad);
+      };
+      source.on('featuresloadend', onLoad);
+      source.on('featuresloaderror', onLoad); // resolve anyway (empty list)
+      // Safety net: never leave the sidebar pending forever.
+      setTimeout(() => {
+        cleanup();
+        resolve();
+      }, 15000);
     });
   }
 
