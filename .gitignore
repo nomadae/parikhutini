@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 venv/
+.vscode/
 data/heightmap.json
 volcano_heightmap.npy
 volcano_heightmap.png
