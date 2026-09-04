@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Terrain from TIFF</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">3D Terrain Viewer</div>
+    <div id="loading">Loading TIFF data and initializing 3D viewer...</div>
+    <div id="controls">
+        <label>DEM: <select id="demSelect"></select></label>
+        <label>Height Scale: <input type="range" id="heightScale" min="0.001" max="0.1" step="0.001" value="0.01"></label>
+        <label>Wireframe: <input type="checkbox" id="wireframe"></label>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
