@@ -4,4 +4,5 @@ dist
 venv/
 data/heightmap.json
 volcano_heightmap.npy
+volcano_heightmap.png
 __pycache__/
