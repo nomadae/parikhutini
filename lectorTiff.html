@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de MDE - Modelo Digital de Elevación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .upload-section {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #3498db;
+            border-radius: 5px;
+        }
+        .info-panel {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .visualization {
+            position: relative; /* ancla del panel de perfil flotante */
+            display: flex;
+            margin: 20px 0;
+        }
+        .canvas-container {
+            flex: 1;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #elevationCanvas {
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: 100%;  /* nunca más ancho que el contenedor */
+            max-height: 75vh; /* rásteres altos caben completos, sin distorsión */
+            margin: 0 auto;   /* centrado cuando domina max-height */
+        }
+        .elevation-profile {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 300px;
+            max-width: calc(100% - 24px); /* no desborda en ventanas estrechas */
+            background: white;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+        }
+        .elevation-profile h4 {
+            margin: 0 0 8px 0;
+        }
+        #profileCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        #profileInfo,
+        #profileRange {
+            margin: 6px 0 0 0;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+        .legend {
+            display: flex;
+            height: 30px;
+            margin: 10px 0;
+            background: linear-gradient(90deg, blue, cyan, green, yellow, orange, red, maroon);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-box {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Visualizador de Modelo Digital de Elevación (MDE)</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="tiffFile" accept=".tiff,.tif" style="display: none;">
+            <button onclick="document.getElementById('tiffFile').click()">Seleccionar archivo TIFF MDE</button>
+            <p id="fileName">No se ha seleccionado ningún archivo</p>
+        </div>
+
+        <div class="info-panel">
+            <h3>Información del MDE</h3>
+            <div id="fileInfo">Cargando información...</div>
+        </div>
+
+        <div class="stats" id="statsContainer">
+            <!-- Las estadísticas se generarán dinámicamente -->
+        </div>
+
+        <div class="visualization">
+            <div class="canvas-container">
+                <h4>Visualización 2D del Terreno</h4>
+                <canvas id="elevationCanvas" width="500" height="400"></canvas>
+                <div class="legend">
+                    <span style="float: left;">Baja elevación</span>
+                    <span style="float: right;">Alta elevación</span>
+                </div>
+            </div>
+            
+            <div class="elevation-profile">
+                <h4>Perfil de Elevación</h4>
+                <canvas id="profileCanvas" width="400" height="200"></canvas>
+                <div id="profileInfo">Selecciona puntos en el mapa para ver el perfil</div>
+                <div id="profileRange"></div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Herramientas de Análisis</h3>
+            <button onclick="calculateSlope()">Calcular Pendientes</button>
+            <button onclick="calculateAspect()">Calcular Orientación</button>
+            <button onclick="findHighestPoint()">Punto Más Alto</button>
+            <button onclick="findLowestPoint()">Punto Más Bajo</button>
+            <div id="analysisResults"></div>
+        </div>
+    </div>
+
+    <!-- Librería TIFF: debe cargar antes del script inline -->
+    <script src="./UTIF.js"></script>
+
+    <script>
+        let elevationData = null;
+        let metadata = {};
+        let canvasContext = null;
+        let profileContext = null;
+
+        // Configurar canvases
+        window.onload = function() {
+            const canvas = document.getElementById('elevationCanvas');
+            const profileCanvas = document.getElementById('profileCanvas');
+            canvasContext = canvas.getContext('2d');
+            profileContext = profileCanvas.getContext('2d');
+            
+            // Event listener para el input de archivo
+            document.getElementById('tiffFile').addEventListener('change', handleFileSelect);
+        };
+
+        // Manejar la selección de archivo
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('fileName').textContent = `Archivo: ${file.name}`;
+            document.getElementById('fileInfo').textContent = 'Procesando archivo TIFF...';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                await processTIFF(arrayBuffer);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('fileInfo').textContent = 'Error al procesar el archivo: ' + error.message;
+            }
+        }
+        function getMax(arr, noData) {
+            let max = -Infinity;
+            for (let i = 0; i < arr.length; i++) {
+                const v = arr[i];
+                if (noData !== null && v === noData) continue;
+                if (v > max) max = v;
+            }
+            return max === -Infinity ? 0 : max;
+        }
+        function getMin(arr, noData) {
+            let min = Infinity;
+            for (let i = 0; i < arr.length; i++) {
+                const v = arr[i];
+                if (noData !== null && v === noData) continue;
+                if (v < min) min = v;
+            }
+            return min === Infinity ? 0 : min;
+        }
+
+        // Obtener el valor NoData declarado en el TIFF (etiqueta GDAL_NODATA, 42113).
+        // GDAL lo escribe como texto ASCII, p. ej. "-9999" o "-32768".
+        function getNoDataValue(ifd) {
+            const tag = ifd["t42113"];
+            if (!tag || tag.length === 0) return null;
+            const raw = tag[0];
+            let val;
+            if (typeof raw === "string") val = parseFloat(raw);
+            else if (typeof raw === "number") val = raw;
+            else return null;
+            return Number.isFinite(val) ? val : null;
+        }
+
+        // Procesar el archivo TIFF
+        async function processTIFF(arrayBuffer) {
+            try {
+                // Decodificar TIFF usando UTIF
+                const ifds = UTIF.decode(arrayBuffer);
+                UTIF.decodeImage(arrayBuffer, ifds[0]);
+
+                const ifd = ifds[0];
+                const width = ifd.width;
+                const height = ifd.height;
+                const bps = ifd["t258"] ? ifd["t258"][0] : 8;   // bits por muestra
+                const sfmt = ifd["t339"] ? ifd["t339"][0] : 1;   // 1=sin signo, 2=con signo, 3=float
+
+                // ifds[0].data contiene las muestras crudas ya en orden little-endian:
+                // UTIF.js intercambia los 16-bit big-endian en decodeImage (UTIF.js ~236-242).
+                // Se crea una VISTA tipada sobre el mismo buffer (sin copia byte a byte);
+                // esto corrige el error anterior de `new Uint16Array(ifds[0].data)`.
+                let typeName;
+                if (bps === 32 && sfmt === 3) {
+                    // Float32: UTIF no intercambia los big-endian de 32 bits,
+                    // hay que hacerlo aquí (no aplica a los MDE de este proyecto).
+                    if (!ifd.isLE) {
+                        const swapped = new Uint8Array(ifd.data.byteLength);
+                        for (let i = 0; i < swapped.length; i += 4) {
+                            swapped[i]     = ifd.data[i + 3];
+                            swapped[i + 1] = ifd.data[i + 2];
+                            swapped[i + 2] = ifd.data[i + 1];
+                            swapped[i + 3] = ifd.data[i];
+                        }
+                        elevationData = new Float32Array(swapped.buffer, 0, width * height);
+                    } else {
+                        elevationData = new Float32Array(ifd.data.buffer, ifd.data.byteOffset, width * height);
+                    }
+                    typeName = "Float32";
+                } else if (bps === 16) {
+                    // Sin t339 el TIFF se interpreta como SIN SIGNO (valor por defecto
+                    // de la especificación). GDAL escribe t339=2 para Int16.
+                    elevationData = sfmt === 2
+                        ? new Int16Array(ifd.data.buffer, ifd.data.byteOffset, width * height)
+                        : new Uint16Array(ifd.data.buffer, ifd.data.byteOffset, width * height);
+                    typeName = sfmt === 2 ? "Int16" : "Uint16";
+                } else if (bps === 8) {
+                    elevationData = sfmt === 2
+                        ? new Int8Array(ifd.data.buffer, ifd.data.byteOffset, width * height)
+                        : new Uint8Array(ifd.data.buffer, ifd.data.byteOffset, width * height);
+                    typeName = sfmt === 2 ? "Int8" : "Uint8";
+                } else {
+                    throw new Error(`Bits por muestra no soportados: ${bps}`);
+                }
+
+                const noDataValue = getNoDataValue(ifd);
+
+                // Guardar metadatos (min/max excluyen los píxeles NoData)
+                metadata = {
+                    width: width,
+                    height: height,
+                    minElevation: getMin(elevationData, noDataValue),
+                    maxElevation: getMax(elevationData, noDataValue),
+                    dataType: typeName,
+                    noData: noDataValue
+                };
+
+                // Mostrar información
+                displayFileInfo();
+                visualizeElevation();
+                updateStatistics();
+
+            } catch (error) {
+                throw new Error('Formato TIFF no compatible o archivo corrupto');
+            }
+        }
+
+        // Mostrar información del archivo
+        function displayFileInfo() {
+            const info = `
+                <p><strong>Dimensiones:</strong> ${metadata.width} × ${metadata.height} píxeles</p>
+                <p><strong>Rango de elevación:</strong> ${metadata.minElevation.toFixed(2)} - ${metadata.maxElevation.toFixed(2)} unidades</p>
+                <p><strong>Tipo de datos:</strong> ${metadata.dataType}</p>
+                <p><strong>Amplitud de elevación (máx − mín):</strong> ${(metadata.maxElevation - metadata.minElevation).toFixed(2)} unidades</p>
+            `;
+            document.getElementById('fileInfo').innerHTML = info;
+        }
+
+        // Visualizar los datos de elevación
+        function visualizeElevation() {
+            const canvas = document.getElementById('elevationCanvas');
+            canvas.width = metadata.width;
+            canvas.height = metadata.height;
+
+            const min = metadata.minElevation;
+            const max = metadata.maxElevation;
+            const range = (max - min) || 1;
+            const noData = metadata.noData;
+
+            // Crear imagen de elevación
+            const imageData = canvasContext.createImageData(metadata.width, metadata.height);
+
+            for (let y = 0; y < metadata.height; y++) {
+                for (let x = 0; x < metadata.width; x++) {
+                    const index = y * metadata.width + x;
+                    const elevation = elevationData[index];
+                    const pixelIndex = index * 4;
+
+                    if (noData !== null && elevation === noData) {
+                        imageData.data[pixelIndex + 3] = 0; // píxel NoData => transparente
+                        continue;
+                    }
+                    // Normalizar elevación a 0-1
+                    const normalized = (elevation - min) / range;
+
+                    // Mapear a color (escala azul-verde-rojo)
+                    const color = getColorFromElevation(normalized);
+
+                    imageData.data[pixelIndex] = color.r;     // R
+                    imageData.data[pixelIndex + 1] = color.g; // G
+                    imageData.data[pixelIndex + 2] = color.b; // B
+                    imageData.data[pixelIndex + 3] = 255;     // A
+                }
+            }
+            
+            canvasContext.putImageData(imageData, 0, 0);
+            
+            // Hacer el canvas interactivo
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+
+        // Obtener color basado en la elevación
+        function getColorFromElevation(normalized) {
+            // Escala de colores: azul (bajo) -> verde -> amarillo -> rojo (alto)
+            if (normalized < 0.25) {
+                return { r: 0, g: 0, b: Math.floor(255 * (normalized * 4)) };
+            } else if (normalized < 0.5) {
+                return { r: 0, g: Math.floor(255 * ((normalized - 0.25) * 4)), b: 255 };
+            } else if (normalized < 0.75) {
+                return { r: Math.floor(255 * ((normalized - 0.5) * 4)), g: 255, b: 0 };
+            } else {
+                return { r: 255, g: Math.floor(255 * (1 - (normalized - 0.75) * 4)), b: 0 };
+            }
+        }
+
+        // Actualizar estadísticas
+        function updateStatistics() {
+            const stats = calculateStatistics();
+            const statsHTML = `
+                <div class="stat-box">
+                    <h4>Elevación Media</h4>
+                    <p>${stats.mean.toFixed(2)}</p>
+                </div>
+                <div class="stat-box">
+                    <h4>Desviación Estándar</h4>
+                    <p>${stats.stdDev.toFixed(2)}</p>
+                </div>
+                <div class="stat-box">
+                    <h4>Mediana</h4>
+                    <p>${stats.median.toFixed(2)}</p>
+                </div>
+                <div class="stat-box">
+                    <h4>Pendiente Media</h4>
+                    <p>${stats.avgSlope.toFixed(2)}°</p>
+                </div>
+            `;
+            document.getElementById('statsContainer').innerHTML = statsHTML;
+        }
+
+        // Calcular estadísticas
+        function calculateStatistics() {
+            const noData = metadata.noData;
+            const total = elevationData.length;
+
+            // Una sola pasada para suma y suma de cuadrados, excluyendo NoData
+            let sum = 0;
+            let sumSquared = 0;
+            let count = 0;
+            for (let i = 0; i < total; i++) {
+                const v = elevationData[i];
+                if (noData !== null && v === noData) continue;
+                sum += v;
+                sumSquared += v * v;
+                count++;
+            }
+
+            // Copia compacta de valores válidos para la mediana (evita [...arr] y su sort lento)
+            const valid = new Float64Array(count);
+            let j = 0;
+            for (let i = 0; i < total; i++) {
+                const v = elevationData[i];
+                if (noData !== null && v === noData) continue;
+                valid[j++] = v;
+            }
+            valid.sort(); // TypedArray.sort() ordena numéricamente sin comparador
+
+            const mean = count ? sum / count : 0;
+            const variance = count ? (sumSquared / count) - (mean * mean) : 0;
+            const stdDev = Math.sqrt(Math.max(0, variance));
+            const mid = valid.length >> 1;
+            const median = valid.length % 2 === 1 ? valid[mid] : (valid[mid - 1] + valid[mid]) / 2;
+
+            // Calcular pendiente promedio aproximada (ignora vecinos NoData)
+            let slopeSum = 0;
+            let slopeCount = 0;
+            for (let y = 1; y < metadata.height - 1; y++) {
+                for (let x = 1; x < metadata.width - 1; x++) {
+                    const center = elevationData[y * metadata.width + x];
+                    const right = elevationData[y * metadata.width + (x + 1)];
+                    const bottom = elevationData[(y + 1) * metadata.width + x];
+                    if (noData !== null && (center === noData || right === noData || bottom === noData)) continue;
+                    slopeSum += Math.atan2(Math.abs(right - center), 1) * (180 / Math.PI);
+                    slopeSum += Math.atan2(Math.abs(bottom - center), 1) * (180 / Math.PI);
+                    slopeCount += 2;
+                }
+            }
+            const avgSlope = slopeCount ? slopeSum / slopeCount : 0;
+
+            return { mean, stdDev, median, avgSlope };
+        }
+
+        // Manejar clic en el canvas para perfil
+        function handleCanvasClick(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            // El canvas se muestra escalado por CSS: convertir píxel mostrado a píxel del ráster
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.min(metadata.width - 1, Math.max(0, Math.floor((event.clientX - rect.left) * scaleX)));
+            const y = Math.min(metadata.height - 1, Math.max(0, Math.floor((event.clientY - rect.top) * scaleY)));
+
+            const elevation = elevationData[y * metadata.width + x];
+            document.getElementById('profileInfo').textContent =
+                (metadata.noData !== null && elevation === metadata.noData)
+                    ? `Posición: (${x}, ${y}) - Sin datos (NoData)`
+                    : `Posición: (${x}, ${y}) - Elevación: ${elevation.toFixed(2)}`;
+            document.getElementById('profileRange').textContent =
+                `Máx: ${metadata.maxElevation.toFixed(1)} · Mín: ${metadata.minElevation.toFixed(1)}`;
+
+            drawElevationProfile(x);
+        }
+
+        // Dibujar perfil de elevación
+        function drawElevationProfile(x) {
+            const profileData = [];
+            for (let y = 0; y < metadata.height; y++) {
+                profileData.push(elevationData[y * metadata.width + x]);
+            }
+
+            const canvas = document.getElementById('profileCanvas');
+            // El CSS da width:100% al canvas; su rect ya refleja el ancho de contenido del panel
+            const cssWidth = canvas.getBoundingClientRect().width || 278;
+            const width = Math.max(200, Math.round(cssWidth));
+            const height = Math.round(width * 0.45);
+            canvas.width = width;
+            canvas.height = height;
+            profileContext.clearRect(0, 0, width, height);
+
+            // Dibujar perfil (saltando los píxeles NoData para no hundir la línea)
+            const noData = metadata.noData;
+            const range = (metadata.maxElevation - metadata.minElevation) || 1;
+            profileContext.beginPath();
+            let started = false;
+            for (let i = 0; i < profileData.length; i++) {
+                if (noData !== null && profileData[i] === noData) { started = false; continue; }
+                const xPos = (i / profileData.length) * width;
+                const yPos = height - ((profileData[i] - metadata.minElevation) / range) * height;
+                if (!started) { profileContext.moveTo(xPos, yPos); started = true; }
+                else profileContext.lineTo(xPos, yPos);
+            }
+
+            profileContext.strokeStyle = '#3498db';
+            profileContext.lineWidth = 2;
+            profileContext.stroke();
+            // Etiquetas de posición y máx/mín viven en #profileInfo y #profileRange
+        }
+
+        // Funciones de análisis
+        function calculateSlope() {
+            document.getElementById('analysisResults').innerHTML = 
+                '<p>Análisis de pendientes calculado. Pendiente media: ' + 
+                calculateStatistics().avgSlope.toFixed(2) + '°</p>';
+        }
+
+        function calculateAspect() {
+            if (!elevationData || !metadata.width) {
+                document.getElementById('analysisResults').innerHTML =
+                    '<p>Carga primero un archivo MDE para calcular la orientación.</p>';
+                return;
+            }
+            const w = metadata.width, h = metadata.height;
+            const noData = metadata.noData;
+            const classNames = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const classes = new Array(8).fill(0);
+            let sinSum = 0, cosSum = 0, valid = 0, flat = 0;
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const idx = y * w + x;
+                    const c = elevationData[idx];
+                    if (noData !== null && (c === noData ||
+                        elevationData[idx - 1] === noData || elevationData[idx + 1] === noData ||
+                        elevationData[idx - w] === noData || elevationData[idx + w] === noData)) continue;
+                    // Diferencias finitas de Horn (la imagen crece en y hacia el sur)
+                    const dzdx = (elevationData[idx + 1] - elevationData[idx - 1]) / 2;
+                    const dzdy = (elevationData[idx + w] - elevationData[idx - w]) / 2;
+                    if (dzdx === 0 && dzdy === 0) { flat++; continue; }
+                    // 0° = norte, 90° = este (dirección de máxima pendiente descendente)
+                    let aspect = Math.atan2(-dzdx, dzdy) * (180 / Math.PI);
+                    if (aspect < 0) aspect += 360;
+                    const rad = aspect * (Math.PI / 180);
+                    sinSum += Math.sin(rad);
+                    cosSum += Math.cos(rad);
+                    classes[Math.round(aspect / 45) % 8]++;
+                    valid++;
+                }
+            }
+
+            let result;
+            if (valid === 0) {
+                result = '<p>No hay celdas válidas para calcular la orientación.</p>';
+            } else {
+                let meanAspect = Math.atan2(sinSum, cosSum) * (180 / Math.PI);
+                if (meanAspect < 0) meanAspect += 360;
+                let dominant = 0;
+                for (let i = 1; i < 8; i++) if (classes[i] > classes[dominant]) dominant = i;
+                result = `<p>Orientación media: ${meanAspect.toFixed(1)}° (clase dominante: ${classNames[dominant]})</p>` +
+                         `<p>Celdas válidas: ${valid.toLocaleString('es-MX')} · planas: ${flat.toLocaleString('es-MX')}</p>` +
+                         '<p>Clases: ' + classNames.map((n, i) => `${n} ${classes[i].toLocaleString('es-MX')}`).join(' · ') + '</p>';
+            }
+            document.getElementById('analysisResults').innerHTML = result;
+        }
+
+        function findHighestPoint() {
+            const maxIndex = elevationData.indexOf(metadata.maxElevation);
+            const y = Math.floor(maxIndex / metadata.width);
+            const x = maxIndex % metadata.width;
+            document.getElementById('analysisResults').innerHTML = 
+                `<p>Punto más alto: (${x}, ${y}) - Elevación: ${metadata.maxElevation.toFixed(2)}</p>`;
+        }
+
+        function findLowestPoint() {
+            const minIndex = elevationData.indexOf(metadata.minElevation);
+            const y = Math.floor(minIndex / metadata.width);
+            const x = minIndex % metadata.width;
+            document.getElementById('analysisResults').innerHTML = 
+                `<p>Punto más bajo: (${x}, ${y}) - Elevación: ${metadata.minElevation.toFixed(2)}</p>`;
+        }
+    </script>
+</body>
+</html>
