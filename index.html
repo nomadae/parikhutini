@@ -5,7 +5,7 @@
       <meta http-equiv="content-language" content="es-mx">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       
-      <title>Parhikutini | Mapa Interactvo</title>
+      <title>Parhikutini | Volcanes de Michoacán</title>
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.10.0/ol.css">
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css">
       <!-- <script src="https://cdn.jsdelivr.net/npm/ol@v10.1.0/dist/ol.js"></script> -->
@@ -25,23 +25,47 @@
       </div>
       <div id="pane" class="pane">
         <div class="container-fluid">
-          <img src="./src/img/igef.png" class="img-fluid" alt="Instituto de Geofisica">
-          <div class="row">
-            <div class="col">
-              <section>
-                <h3 class="text-light bg-dark">¿Qué es un Volcán?</h1>
-              </section>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col">
-              <p class="text-light bg-dark">Drag the layer you wish to view over the satellite imagery into the box.</p>
-              <div id="lista-municipios" class="list-group">
-                <!-- <a href="#" class="list-group-item list-group-item-action active" aria-current="true">Prueba</a> -->
-              </div>
-              <ul id="municipios"></ul> 
-            </div>
-          </div>
+          <img src="./src/img/igef.png" class="img-fluid" alt="Instituto de Geofísica, UNAM">
+
+          <section class="panel-section" id="que-es-un-volcan">
+            <h2>¿Qué es un volcán?</h2>
+            <p>Un volcán es una abertura en la superficie de la Tierra por la que salen roca fundida, ceniza y gases.<sup>[1]</sup> A la roca fundida que todavía está bajo tierra se le llama <strong>magma</strong>; cuando llega a la superficie y se derrama recibe el nombre de <strong>lava</strong>.<sup>[1]</sup></p>
+            <p>El magma se forma en zonas profundas de la corteza y del manto, donde la roca se calienta o pierde presión. Al ser menos denso que la roca que lo rodea, asciende y se acumula en una <strong>cámara magmática</strong>; desde ahí sube por el <strong>conducto</strong> y sale por el <strong>cráter</strong>.<sup>[1]</sup></p>
+            <p>Durante una erupción, además de lava, un volcán puede lanzar fragmentos de roca y ceniza —llamados <strong>tefra</strong>— y gases como vapor de agua y dióxido de carbono.<sup>[1]</sup></p>
+            <p>Los volcanes tienen muchas formas y tamaños. Los <strong>conos de escoria</strong> son montículos que crecen alrededor de una sola boca eruptiva y suelen erupcionar una única vez; en Michoacán son el tipo más común.<sup>[1]</sup></p>
+          </section>
+
+          <section class="panel-section" id="volcanes-de-michoacan">
+            <h2>Volcanes de Michoacán</h2>
+            <p>Michoacán se encuentra dentro del <strong>Eje Volcánico Transmexicano</strong>, un cinturón de volcanes que cruza el centro de México. Se formó porque la placa oceánica de Cocos se hunde (subduce) bajo la placa de Norteamérica, y ese proceso produce el magma que alimenta a los volcanes.<sup>[2]</sup></p>
+            <p>En ese cinturón se localiza el <strong>Campo Volcánico Michoacán–Guanajuato</strong>, uno de los campos <em>monogenéticos</em> más grandes del mundo, con más de 1,000 conos de escoria.<sup>[3][4]</sup> «Monogenético» significa que cada volcán nace, erupciona una sola vez y se apaga; por eso el paisaje se llena de miles de conos pequeños.</p>
+            <ul class="volcano-highlights">
+              <li><strong>Parhikutini (Paricutín).</strong> Considerado el volcán más joven de Norteamérica, nació el 20 de febrero de 1943 en un maizal cercano a la comunidad purépecha de San Juan Parangaricutiro. En su primer año creció unos 336 metros, y sus lavas sepultaron el pueblo —hoy solo sobresale la torre de la iglesia—. Dejó de erupcionar en 1952.<sup>[5][6]</sup></li>
+              <li><strong>El Jorullo.</strong> Nació entre 1759 y 1774, casi dos siglos antes que el Paricutín, y es uno de los primeros volcanes en ser observados y estudiados mientras nacía.<sup>[7]</sup></li>
+              <li><strong>El Pico de Tancítaro.</strong> Con unos 3,840 metros sobre el nivel del mar, es el punto más alto del estado de Michoacán.<sup>[8]</sup></li>
+            </ul>
+          </section>
+
+          <section class="panel-section" id="explora">
+            <h2>Explora el mapa</h2>
+            <p>Selecciona un municipio y haz clic en un volcán para centrar el mapa.</p>
+            <div id="lista-municipios" class="list-group"></div>
+          </section>
+
+          <section class="panel-section" id="referencias">
+            <h2>Referencias</h2>
+            <ol class="references">
+              <li id="ref-1">U.S. Geological Survey, Volcano Hazards Program — <a href="https://www.usgs.gov/programs/VHP/about-volcanoes" target="_blank" rel="noopener">«About Volcanoes»</a>.</li>
+              <li id="ref-2"><a href="https://rmcg.unam.mx/index.php/rmcg/article/view/1357" target="_blank" rel="noopener">«Interpretación geodinámica del volcanismo del Eje Neovolcánico Transmexicano»</a>, Revista Mexicana de Ciencias Geológicas, UNAM.</li>
+              <li id="ref-3">Hasenaka, T. & Carmichael, I.S.E. (1985). <a href="https://www.paricutin.umich.mx/Documentos/Hasenaka1985_CVMG_JVGR.pdf" target="_blank" rel="noopener">«The cinder cones of Michoacán–Guanajuato, central Mexico: their age, volume and distribution, and magma discharge rate»</a>, Journal of Volcanology and Geothermal Research.</li>
+              <li id="ref-4">Hasenaka, T. & Carmichael, I.S.E. (1985). <a href="https://doi.org/10.22201/igeof.00167169p.1985.24.4.2179" target="_blank" rel="noopener">«A compilation of location, size, and geomorphological parameters of volcanoes of the Michoacán–Guanajuato Volcanic Field, Central Mexico»</a>, Geofísica Internacional 24(4).</li>
+              <li id="ref-5">Smithsonian National Museum of Natural History — <a href="https://naturalhistory.si.edu/education/teaching-resources/earth-science/paricutin-birth-volcano" target="_blank" rel="noopener">«Parícutin: The Birth of a Volcano»</a>.</li>
+              <li id="ref-6">Foshag, W.F. & González R., J. (1956). <a href="https://doi.org/10.3133/b965d" target="_blank" rel="noopener">«Birth and development of Paricutin volcano, Mexico»</a>, U.S. Geological Survey Bulletin 965-D.</li>
+              <li id="ref-7"><a href="https://doi.org/10.1144/iavcel002.6" target="_blank" rel="noopener">«Pyroclastic deposits and lava flows from the 1759–1774 eruption of El Jorullo, Mexico»</a> (volumen IAVCEI sobre vulcanismo monogenético).</li>
+              <li id="ref-8">Peakbagger — <a href="https://peakbagger.com/peak.aspx?pid=8013" target="_blank" rel="noopener">«Cerro Tancítaro»</a>.</li>
+            </ol>
+            <p class="panel-note">Nota: las cifras están redondeadas y provienen de las fuentes citadas. Esta sección se actualizará conforme se sumen fuentes institucionales (texto provisional).</p>
+          </section>
         </div>
       </div>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
