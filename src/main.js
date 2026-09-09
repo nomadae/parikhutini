@@ -66,30 +66,31 @@ map.addOverlay(popup);
 
 map.on('click', function (evt) {
   const coordinate = evt.coordinate;
-  const fl = map.forEachFeatureAtPixel(evt.pixel, function (feature, lyr) {
-    return [feature, lyr];
+  const feature = map.forEachFeatureAtPixel(evt.pixel, function (f) {
+    return f;
   });
-  try {
-    const clickedFeature = fl[0].values_.geometry;
-    if (clickedFeature) {
-      const hdms = toStringHDMS(coordinate);
-      const placeholderText =
-        '<p>There is something special about the first two products calculated in Example 7.1.1.</p>';
-      content.innerHTML =
-        '<span><b>Mi Titulo</b></span><br><br><p>The location you clicked was:</p><code>' +
-        hdms +
-        '</code><br>' +
-        placeholderText;
-      popup.setPosition(coordinate);
-      console.log(fl[0].getGeometry().getCoordinates());
-      console.log(fl[0].values_.index);
-    }
-  } catch (e) {
-    if (e instanceof TypeError) {
-      console.log('No feature found near clicked zone.');
-    }
-  }
+  if (!(feature instanceof Feature)) return;
+
+  const props = feature.values_ || {};
+  const hdms = toStringHDMS(coordinate);
+  const name = props.nombre ? escapeHtml(props.nombre) : 'Volcán';
+  const municipio = props.municipio ? escapeHtml(props.municipio) : '—';
+  content.innerHTML =
+    `<h4 class="popup-title">${name}</h4>` +
+    `<p class="popup-meta">Municipio: ${municipio}</p>` +
+    `<p class="popup-coords">Coordenadas: <code>${hdms}</code></p>`;
+  popup.setPosition(coordinate);
 });
+
+/** Escape user/feature-provided strings before injecting them as HTML. */
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 ////////////////////////////////////////////
 ////              Cursor                ////
