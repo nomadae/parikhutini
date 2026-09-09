@@ -31,86 +31,78 @@ export function buildMunicipalitySidebar(map, layer) {
   }
 
   return sourceReady(vectorSource).then(() => {
-    const features = vectorSource.getFeatures();
-
-    const mun_volcanoe_list = {};
-    let activeVolcanoSpan = null;
-    for (const feature of features) {
-      const mun = feature.values_.municipio;
-      const volcanoName = feature.values_.nombre;
-      const layerIndex = feature.values_.index;
-      const coord = feature.getGeometry().getCoordinates();
-      if (volcanoName && mun) {
-        mun_volcanoe_list[mun] +=
-          volcanoName + '#' + layerIndex + '#' + `${coord[0]}&${coord[1]}` + ',';
-      }
+    // Group features by municipio, dropping anonymous / unplaced entries.
+    const byMunicipio = {};
+    for (const feature of vectorSource.getFeatures()) {
+      const props = feature.values_ || {};
+      if (!props.nombre || !props.municipio) continue;
+      if (!byMunicipio[props.municipio]) byMunicipio[props.municipio] = [];
+      const coords = feature.getGeometry().getCoordinates();
+      byMunicipio[props.municipio].push({ nombre: props.nombre, coords });
     }
 
-    // Normalize entries: strip the trailing comma, then drop an "undefined"
-    // artifact when a municipality only has anonymous features.
-    const orderedVolcanoesByMunName = {};
-    Object.keys(mun_volcanoe_list)
-      .sort()
-      .forEach((mun) => {
-        orderedVolcanoesByMunName[mun] = mun_volcanoe_list[mun]
-          .replace('undefined', '')
-          .slice(0, -1)
-          .trim()
-          .split(',');
-      });
+    const municipios = Object.keys(byMunicipio).sort();
+    let activeBadge = null;
 
-    Object.keys(orderedVolcanoesByMunName).forEach((mun, i) => {
-      const volcanoes = orderedVolcanoesByMunName[mun];
+    municipios.forEach((municipio, i) => {
+      const volcanoes = byMunicipio[municipio].sort((a, b) =>
+        a.nombre.localeCompare(b.nombre, 'es')
+      );
 
-      const collapseListGroup = document.createElement('button');
-      collapseListGroup.innerHTML = mun;
-      collapseListGroup.setAttribute('class', 'list-group-item list-group-item-dark list-group-item-action');
-      collapseListGroup.setAttribute('data-bs-toggle', 'collapse');
-      collapseListGroup.setAttribute('role', 'button');
-      collapseListGroup.setAttribute('data-bs-target', `#munCollapse_${i}`);
-      collapseListGroup.setAttribute('aria-expanded', 'false');
-      collapseListGroup.setAttribute('aria-controls', `#munCollapse_${i}`);
+      // Municipality header (collapse trigger) with a volcano count badge.
+      const header = document.createElement('button');
+      header.type = 'button';
+      header.className = 'list-group-item list-group-item-dark list-group-item-action';
+      header.setAttribute('data-bs-toggle', 'collapse');
+      header.setAttribute('data-bs-target', `#munCollapse_${i}`);
+      header.setAttribute('aria-expanded', 'false');
+      header.setAttribute('aria-controls', `munCollapse_${i}`);
 
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = municipio;
+
+      const countBadge = document.createElement('span');
+      countBadge.className = 'muni-count';
+      countBadge.textContent = volcanoes.length;
+
+      header.append(nameSpan, countBadge);
+
+      // Collapsible list of volcanoes for this municipality.
       const collapseContent = document.createElement('div');
-      collapseContent.setAttribute('class', 'collapse');
-      collapseContent.setAttribute('id', `munCollapse_${i}`);
+      collapseContent.className = 'collapse';
+      collapseContent.id = `munCollapse_${i}`;
       collapseContent.setAttribute('data-bs-parent', '#lista-municipios');
 
-      volcanoes.forEach((volcanoe) => {
-        const vbtn = document.createElement('button');
-        vbtn.setAttribute('type', 'button');
-        vbtn.setAttribute('class', 'btn');
-        vbtn.style.padding = '0';
+      volcanoes.forEach((volcano) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn';
 
-        // NOTE: the first token of the encoded entry is the volcano NAME
-        // (the municipality only names the containing group).
-        const [, layerIndex, coords] = volcanoe.split('#');
-        const coordsArray = coords.split('&').map(Number);
+        const badge = document.createElement('span');
+        badge.className = 'badge rounded-pill bg-secondary';
+        badge.textContent = volcano.nombre;
+        badge.title = volcano.nombre;
 
-        const volcanoNameSpan = document.createElement('span');
-        volcanoNameSpan.innerHTML = volcanoe.split('#')[0];
-        volcanoNameSpan.setAttribute('class', 'badge rounded-pill bg-secondary');
-
-        vbtn.setAttribute('data-layer-index', layerIndex);
-        vbtn.onclick = () => {
+        btn.onclick = () => {
           // Keep the highlight on the last clicked volcano only.
-          if (activeVolcanoSpan && activeVolcanoSpan !== volcanoNameSpan) {
-            activeVolcanoSpan.setAttribute('class', 'badge rounded-pill bg-secondary');
+          if (activeBadge && activeBadge !== badge) {
+            activeBadge.className = 'badge rounded-pill bg-secondary';
           }
-          volcanoNameSpan.setAttribute('class', 'badge rounded-pill bg-primary');
-          activeVolcanoSpan = volcanoNameSpan;
+          badge.className = 'badge rounded-pill bg-primary';
+          activeBadge = badge;
 
           // Center the map at the selected volcano coordinates.
-          map.getView().setCenter(coordsArray);
-          map.getView().setZoom(14);
+          if (volcano.coords) {
+            map.getView().setCenter(volcano.coords);
+            map.getView().setZoom(14);
+          }
         };
 
-        vbtn.appendChild(volcanoNameSpan);
-        collapseContent.appendChild(vbtn);
+        btn.appendChild(badge);
+        collapseContent.appendChild(btn);
       });
 
-      collapseMuns.appendChild(collapseListGroup);
-      collapseMuns.appendChild(collapseContent);
+      collapseMuns.append(header, collapseContent);
     });
   });
 }
