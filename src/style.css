@@ -125,17 +125,14 @@ body.panel-closed .pane { transform: translateX(100%); }
   margin-top: 18px;
 }
 
-.panel-section > h2 {
-  font-family: var(--font-head);
-  font-size: 1.04rem;
-  font-weight: 700;
-  margin: 0 0 12px;
+/* Section header (collapsible trigger) */
+.panel-section-header {
+  margin: 0;
   padding-left: 12px;
   position: relative;
-  color: var(--text);
 }
 
-.panel-section > h2::before {
+.panel-section-header::before {
   content: "";
   position: absolute;
   left: 0;
@@ -145,6 +142,44 @@ body.panel-closed .pane { transform: translateX(100%); }
   border-radius: 4px;
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
 }
+
+.panel-section-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel-section-toggle:hover { color: #fff; }
+.panel-section-toggle:focus-visible { outline: 2px solid var(--accent-2); border-radius: 4px; }
+
+.panel-section-chevron {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); /* collapsed: chevron points down */
+  transition: transform 0.2s ease;
+}
+
+.panel-section-toggle[aria-expanded="true"] .panel-section-chevron,
+.panel-section-toggle:not(.collapsed) .panel-section-chevron {
+  transform: rotate(-135deg); /* expanded: chevron points up */
+}
+
+.panel-section .collapse { margin-top: 12px; }
 
 .panel-section p {
   color: var(--text);
