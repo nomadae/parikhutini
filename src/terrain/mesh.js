@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import * as GeoTIFF from 'geotiff';
+import { colorAtMeters, getPalette, DEFAULT_PALETTE_ID } from './symbology.js';
 
 /**
  * Fetch a GeoTIFF and return normalized (0..1) elevation data.
@@ -45,18 +46,34 @@ export async function loadTIFF(fileUrl) {
 
 /**
  * Build a colored terrain mesh from normalized elevation data.
+ * Vertex colors come from a symbology palette evaluated at each cell's
+ * absolute elevation (meters), reconstructed from the normalized value via
+ * minElevation/maxElevation. Colors are linearly interpolated between ramp
+ * stops, so slopes shade smoothly instead of banding.
  * @param {Float32Array} elevationData normalized 0..1 values
  * @param {number} width raster width (px)
  * @param {number} height raster height (px)
- * @param {{scale?:number, zScale?:number, wireframe?:boolean}} options
+ * @param {{scale?:number, zScale?:number, wireframe?:boolean, palette?:string,
+ *          minElevation?:number, maxElevation?:number}} options
  */
 export function createTerrainMesh(elevationData, width, height, options = {}) {
-  const { scale = 1, zScale = 1, wireframe = false } = options;
+  const {
+    scale = 1,
+    zScale = 1,
+    wireframe = false,
+    palette = DEFAULT_PALETTE_ID,
+    minElevation = 0,
+    maxElevation = 1,
+  } = options;
 
   const geometry = new THREE.BufferGeometry();
   const vertices = [];
   const indices = [];
   const colors = [];
+
+  const elevationRange = maxElevation - minElevation;
+  const ramp = getPalette(palette);
+  const rgb = [0, 0, 0];
 
   // Vertices + colors based on elevation
   for (let y = 0; y < height; y++) {
@@ -67,14 +84,9 @@ export function createTerrainMesh(elevationData, width, height, options = {}) {
 
       vertices.push(x * scale, y * scale, z);
 
-      let color;
-      if (elevation < 0.2) color = new THREE.Color(0, 0, 0.5); // deep water
-      else if (elevation < 0.3) color = new THREE.Color(0, 0, 1); // shallow water
-      else if (elevation < 0.4) color = new THREE.Color(0.8, 0.8, 0.2); // sand
-      else if (elevation < 0.6) color = new THREE.Color(0, 0.5, 0); // grass
-      else if (elevation < 0.8) color = new THREE.Color(0.3, 0.2, 0.1); // mountain
-      else color = new THREE.Color(1, 1, 1); // snow
-      colors.push(color.r, color.g, color.b);
+      const meters = minElevation + elevation * elevationRange;
+      colorAtMeters(ramp, meters, rgb);
+      colors.push(rgb[0], rgb[1], rgb[2]);
     }
   }
 

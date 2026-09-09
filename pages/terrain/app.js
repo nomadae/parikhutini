@@ -8,6 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import { DEMS, resolveInitialDem } from '../../src/terrain/demCatalog.js';
 import { createTerrainMesh, loadTIFF } from '../../src/terrain/mesh.js';
+import { PALETTES, DEFAULT_PALETTE_ID, getPalette, legendStops } from '../../src/terrain/symbology.js';
 
 // Preselectable DEM via ?mde=<slug|name>
 const mdeParam = new URLSearchParams(location.search).get('mde') || '';
@@ -97,12 +98,79 @@ let data = null;
 let width = 0;
 let height = 0;
 let zScale = 0.01;
+let minElevation = null;
+let maxElevation = null;
+let currentPaletteId = DEFAULT_PALETTE_ID;
 let loadToken = 0;
+
+// Symbology palette selector (after state init: references currentPaletteId)
+const paletteSelect = document.getElementById('paletteSelect');
+PALETTES.forEach((palette) => {
+  const option = document.createElement('option');
+  option.value = palette.id;
+  option.textContent = palette.name;
+  paletteSelect.appendChild(option);
+});
+paletteSelect.value = currentPaletteId;
+paletteSelect.addEventListener('change', function (e) {
+  currentPaletteId = e.target.value;
+  if (data) buildTerrain(); // rebuild recolors the mesh with the new ramp
+});
 
 function showLoadError(error) {
   loading.style.display = 'block';
   loading.textContent = `Error loading TIFF: ${error.message}`;
   console.error(error);
+}
+
+/** Attach a rebuilt mesh to the (lazily created) pivot, keeping it centered. */
+function addTerrainToScene(mesh) {
+  if (!terrainPivot) {
+    terrainPivot = new THREE.Group();
+    scene.add(terrainPivot);
+  }
+
+  if (terrain) terrainPivot.remove(terrain);
+  terrain = mesh;
+  terrainPivot.add(terrain);
+
+  // Center the mesh within the pivot
+  terrain.position.set(-width / 2, -height / 2, 0);
+  terrainPivot.position.set(width / 2, height / 2, 0);
+}
+
+/** Rebuild the terrain mesh from the current DEM + symbology settings. */
+function buildTerrain() {
+  if (!data) return;
+  const mesh = createTerrainMesh(data, width, height, {
+    scale: 1,
+    zScale,
+    wireframe: wireframe.checked,
+    palette: currentPaletteId,
+    minElevation,
+    maxElevation,
+  });
+  addTerrainToScene(mesh);
+  updateLegend();
+}
+
+/** Refresh the on-screen gradient legend for the active palette + DEM range. */
+function updateLegend() {
+  const legend = document.getElementById('legend');
+  const hasDem = Number.isFinite(minElevation) && Number.isFinite(maxElevation);
+  legend.classList.toggle('visible', hasDem);
+  if (!hasDem) return;
+
+  const palette = getPalette(currentPaletteId);
+  document.getElementById('legendTitle').textContent = palette.name;
+  document.getElementById('legendMin').textContent =
+    `${Math.round(minElevation).toLocaleString('en-US')} m`;
+  document.getElementById('legendMax').textContent =
+    `${Math.round(maxElevation).toLocaleString('en-US')} m`;
+
+  const stops = legendStops(palette, minElevation, maxElevation);
+  document.getElementById('legendBar').style.background =
+    `linear-gradient(to right, ${stops.map((s) => `${s.color} ${s.pos}%`).join(', ')})`;
 }
 
 async function loadDEM(tiffUrl) {
@@ -115,23 +183,10 @@ async function loadDEM(tiffUrl) {
     data = loaded.data;
     width = loaded.width;
     height = loaded.height;
+    minElevation = loaded.minElevation;
+    maxElevation = loaded.maxElevation;
 
-    const mesh = createTerrainMesh(data, width, height, { scale: 1, zScale, wireframe: wireframe.checked });
-    if (token !== loadToken) return;
-
-    if (!terrainPivot) {
-      terrainPivot = new THREE.Group();
-      scene.add(terrainPivot);
-    }
-
-    if (terrain) terrainPivot.remove(terrain);
-    terrain = mesh;
-    terrainPivot.add(terrain);
-
-    // Center the mesh within the pivot
-    terrain.position.set(-width / 2, -height / 2, 0);
-    terrainPivot.position.set(width / 2, height / 2, 0);
-
+    buildTerrain();
     loading.style.display = 'none';
 
     const centerX = width / 2;
@@ -150,11 +205,7 @@ demSelect.addEventListener('change', function () {
 const heightScale = document.getElementById('heightScale');
 heightScale.addEventListener('input', function (e) {
   zScale = parseFloat(e.target.value);
-  if (!terrain) return;
-  terrainPivot.remove(terrain);
-  terrain = createTerrainMesh(data, width, height, { scale: 1, zScale, wireframe: wireframe.checked });
-  terrain.position.set(-width / 2, -height / 2, 0);
-  terrainPivot.add(terrain);
+  if (data) buildTerrain();
 });
 
 const wireframe = document.getElementById('wireframe');
