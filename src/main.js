@@ -64,6 +64,59 @@ closer.onclick = function () {
 
 map.addOverlay(popup);
 
+// ------------------------------------------------------------------
+//  Morphometry from the volcano catalog (data/all.json fields wco,
+//  wcr, hco, vol, h_o). Catalog units are km / km^3; h_o is the
+//  cone height-to-width ratio. Zero/blank cells mean "not measured"
+//  and are displayed as "s/d" (sin dato). `max` is a physical
+//  plausibility ceiling: the original catalog contains a few capture
+//  errors (e.g. hco of 120 km) that are suppressed instead of shown.
+// ------------------------------------------------------------------
+const MORPHOMETRY = [
+  { key: 'wco', label: 'Ancho de la base', unit: 'km', max: 30, hint: 'diámetro de la base del cono (columna del catálogo: wco)' },
+  { key: 'wcr', label: 'Ancho del cráter', unit: 'km', max: 10, hint: 'diámetro del cráter (columna del catálogo: wcr)' },
+  { key: 'hco', label: 'Altura del cono', unit: 'km', max: 3, hint: 'altura del cono sobre su base (columna del catálogo: hco)' },
+  { key: 'vol', label: 'Volumen', unit: 'km³', max: 100, hint: 'volumen estimado del edificio volcánico (columna del catálogo: vol)' },
+  { key: 'h_o', label: 'Altura / ancho', unit: '', max: 1, hint: 'relación de forma altura-ancho del cono (columna del catálogo: h_o)' },
+];
+
+/** Clean catalog numbers: drop stray spaces (e.g. "0. 73") and commas. */
+function parseCatalogNumber(value) {
+  if (value === null || value === undefined) return NaN;
+  const cleaned = String(value).replace(/\s+/g, '').replace(',', '.');
+  if (cleaned === '' || cleaned === '-') return NaN;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Format a positive measure; null means "no usable value". */
+function formatMeasure(value, max = Infinity) {
+  if (!Number.isFinite(value) || value <= 0 || value > max) return null;
+  return value.toLocaleString('en-US', { maximumSignificantDigits: 3 });
+}
+
+/** HTML for the popup morphometry table ('' when the feature has none). */
+function morphometryHtml(props) {
+  let anyValue = false;
+  const rows = MORPHOMETRY.map((def) => {
+    const value = formatMeasure(parseCatalogNumber(props[def.key]), def.max);
+    if (value !== null) anyValue = true;
+    const text = value === null ? 's/d' : value + (def.unit ? ` ${def.unit}` : '');
+    return (
+      `<dt title="${def.hint}">${def.label}</dt>` +
+      `<dd class="${value === null ? 'is-missing' : ''}">${text}</dd>`
+    );
+  });
+  if (!anyValue) return '';
+  return (
+    '<h5 class="popup-attrs-title">Morfometría</h5>' +
+    '<dl class="popup-attrs">' +
+    rows.join('') +
+    '</dl>' +
+    '<p class="popup-note">Catálogo de volcanes · s/d = sin dato</p>'
+  );
+}
+
 map.on('click', function (evt) {
   const coordinate = evt.coordinate;
   const feature = map.forEachFeatureAtPixel(evt.pixel, function (f) {
@@ -78,7 +131,8 @@ map.on('click', function (evt) {
   content.innerHTML =
     `<h4 class="popup-title">${name}</h4>` +
     `<p class="popup-meta">Municipio: ${municipio}</p>` +
-    `<p class="popup-coords">Coordenadas: <code>${hdms}</code></p>`;
+    `<p class="popup-coords">Coordenadas: <code>${hdms}</code></p>` +
+    morphometryHtml(props);
   popup.setPosition(coordinate);
 });
 
