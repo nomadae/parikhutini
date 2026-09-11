@@ -26,7 +26,32 @@ const map = new Map({
   }),
 });
 
-apply(map, styleJson);
+// Startup loader (defined inline in index.html). Hide it once the basemap
+// style is applied and the first complete frame — volcano vector layer
+// included — has been drawn.
+const startupLoader = document.getElementById('startup-loader');
+
+function hideStartupLoader() {
+  if (!startupLoader || startupLoader.classList.contains('is-hidden')) return;
+  startupLoader.classList.add('is-hidden');
+  const remove = () => startupLoader.remove();
+  startupLoader.addEventListener('transitionend', remove, { once: true });
+  setTimeout(remove, 700);
+}
+
+Promise.resolve(apply(map, styleJson))
+  .catch((error) => {
+    console.error('No se pudo cargar el estilo del mapa:', error);
+  })
+  .then(() => {
+    // rendercomplete waits for pending tile/vector loads; render() makes sure
+    // it fires even when the map is already idle by the time the style lands.
+    map.once('rendercomplete', hideStartupLoader);
+    map.render();
+  });
+
+// Safety net: never leave the loader covering the app.
+setTimeout(hideStartupLoader, 12000);
 
 ////////////////////////////////////////////
 ////         Information Layers         ////

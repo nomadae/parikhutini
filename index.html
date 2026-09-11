@@ -13,18 +13,116 @@
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
       <!-- <script src="https://cdn.jsdelivr.net/npm/ol@v10.1.0/dist/ol.js"></script> -->
       <!-- <script src="https://unpkg.com/ol-mapbox-style@12.1.1/dist/olms.js"></script> -->
+
+      <!-- Startup loader. Kept inline so it paints before the app bundle and
+           external stylesheets load. Colours match the loader spec
+           (--color-1/2/3) to preserve the project's graphical identity. -->
+      <style>
+        .loader {
+          --color-1: rgba(0, 0, 0, 0.5);
+          --color-2: #222b32;
+          --color-3: #de3500;
+          --size: 1px;
+
+          position: relative;
+          width: calc(64 * var(--size));
+          height: calc(64 * var(--size));
+          background-color: var(--color-1);
+          overflow: hidden;
+          /* Volcano silhouette: wide base, concave flanks and a crater
+             notch, where the original used a plain square. */
+          clip-path: polygon(
+            0% 100%,
+            15% 68%,
+            30% 27%,
+            43% 42%,
+            57% 42%,
+            70% 27%,
+            85% 68%,
+            100% 100%
+          );
+        }
+        .loader:after {
+          content: '';
+          position: absolute;
+          inset: calc(8 * var(--size));
+          margin: auto;
+          background: var(--color-2);
+          clip-path: inherit;
+        }
+        .loader:before {
+          content: '';
+          position: absolute;
+          inset: calc(-15 * var(--size));
+          margin: auto;
+          background: var(--color-3);
+          clip-path: inherit;
+          animation: volcanoLoader 2s linear infinite;
+        }
+        @keyframes volcanoLoader {
+          0%,
+          10% {
+            transform: translate(calc(-64 * var(--size)), calc(-64 * var(--size)));
+          }
+          90%,
+          100% {
+            transform: translate(0, 0);
+          }
+        }
+
+        /* Full-screen backdrop that is removed once the map is ready. Kept
+           darker than --color-2 so the volcano silhouette stays legible. */
+        .startup-loader {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 22px;
+          background: radial-gradient(circle at 50% 45%, #151a21 0%, #090c10 72%);
+          opacity: 1;
+          transition: opacity 0.45s ease;
+        }
+        .startup-loader .loader { --size: 1.5px; }
+        .startup-loader.is-hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .startup-loader-text {
+          margin: 0;
+          font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+          font-size: 0.78rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: #a7b0bc;
+        }
+
+        /* Reduced motion: keep the ember identity without the sweep. */
+        @media (prefers-reduced-motion: reduce) {
+          .loader:before {
+            transform: translate(0, 0);
+            animation: volcanoLoaderPulse 1.8s ease-in-out infinite;
+          }
+          @keyframes volcanoLoaderPulse {
+            0%,
+            100% { opacity: 0.25; }
+            50% { opacity: 1; }
+          }
+        }
+      </style>
     </head>
     <body>
+      <div id="startup-loader" class="startup-loader" role="status" aria-live="polite">
+        <div class="loader" aria-hidden="true"></div>
+        <p class="startup-loader-text">Cargando el mapa</p>
+      </div>
       <div id="map">
+        <a href="https://www.maptiler.com" style="position:absolute;left:10px;bottom:10px;z-index:999;"><img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo"></a>
         <button id="panel-toggle" class="panel-toggle" type="button" aria-controls="pane" aria-label="Mostrar u ocultar el panel" aria-expanded="true">✕</button>
         <div id="info"></div>
-        <div class="map-attribution">
-          <a href="https://www.maptiler.com" target="_blank" rel="noopener"><img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo"></a>
-          <span class="map-attribution-links">
-            <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a>
-            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
-          </span>
-        </div>
+        
       </div>
       <div style="display: none;">
         <!-- Popup -->
