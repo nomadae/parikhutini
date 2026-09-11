@@ -1,10 +1,20 @@
+// Self-hosted third-party assets (no CDN <script>/<link>, so the app runs
+// under a strict Content-Security-Policy; see public/_headers).
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 import { Map, Overlay, View } from 'ol';
 import { useGeographic } from 'ol/proj.js';
 import Feature from 'ol/Feature.js';
 import { toStringHDMS } from 'ol/coordinate';
 import apply from 'ol-mapbox-style';
 
-import './style.css';
+import './style.css'; // imports ol/ol.css as well
 import { buildMunicipalitySidebar } from './map/sidebar.js';
 import { createVolcanoLayer, volcanoFeatureStyle } from './map/volcanoLayer.js';
 
@@ -14,7 +24,7 @@ import { createVolcanoLayer, volcanoFeatureStyle } from './map/volcanoLayer.js';
 useGeographic();
 
 const key = import.meta.env.VITE_MAPTILER_KEY;
-const styleJson = `https://api.maptiler.com/maps/hybrid/style.json?key=${key}`;
+const styleJson = `https://api.maptiler.com/maps/hybrid/style.json?key=${encodeURIComponent(key ?? '')}`;
 
 const map = new Map({
   target: 'map',
@@ -120,26 +130,69 @@ function formatMeasure(value, max = Infinity) {
   return value.toLocaleString('en-US', { maximumSignificantDigits: 3 });
 }
 
-/** HTML for the popup morphometry table ('' when the feature has none). */
-function morphometryHtml(props) {
+/**
+ * Morphometry table as a DOM fragment (null when the feature has none).
+ * Built with DOM APIs, so catalog values are never interpreted as HTML.
+ */
+function morphometryFragment(props) {
   let anyValue = false;
   const rows = MORPHOMETRY.map((def) => {
     const value = formatMeasure(parseCatalogNumber(props[def.key]), def.max);
     if (value !== null) anyValue = true;
-    const text = value === null ? 's/d' : value + (def.unit ? ` ${def.unit}` : '');
-    return (
-      `<dt title="${def.hint}">${def.label}</dt>` +
-      `<dd class="${value === null ? 'is-missing' : ''}">${text}</dd>`
-    );
+
+    const term = document.createElement('dt');
+    term.title = def.hint;
+    term.textContent = def.label;
+
+    const detail = document.createElement('dd');
+    detail.textContent = value === null ? 's/d' : value + (def.unit ? ` ${def.unit}` : '');
+    if (value === null) detail.className = 'is-missing';
+
+    return [term, detail];
   });
-  if (!anyValue) return '';
-  return (
-    '<h5 class="popup-attrs-title">Morfometría</h5>' +
-    '<dl class="popup-attrs">' +
-    rows.join('') +
-    '</dl>' +
-    '<p class="popup-note">Catálogo de volcanes · s/d = sin dato</p>'
-  );
+  if (!anyValue) return null;
+
+  const title = document.createElement('h5');
+  title.className = 'popup-attrs-title';
+  title.textContent = 'Morfometría';
+
+  const list = document.createElement('dl');
+  list.className = 'popup-attrs';
+  for (const [term, detail] of rows) list.append(term, detail);
+
+  const note = document.createElement('p');
+  note.className = 'popup-note';
+  note.textContent = 'Catálogo de volcanes · s/d = sin dato';
+
+  const fragment = document.createDocumentFragment();
+  fragment.append(title, list, note);
+  return fragment;
+}
+
+/** Render the popup for a clicked feature without any innerHTML. */
+function renderPopupContent(props, coordinate) {
+  content.replaceChildren();
+
+  const title = document.createElement('h4');
+  title.className = 'popup-title';
+  title.textContent = props.nombre || 'Volcán';
+  content.append(title);
+
+  const meta = document.createElement('p');
+  meta.className = 'popup-meta';
+  meta.textContent = `Municipio: ${props.municipio || '—'}`;
+  content.append(meta);
+
+  const coords = document.createElement('p');
+  coords.className = 'popup-coords';
+  coords.append('Coordenadas: ');
+  const code = document.createElement('code');
+  code.textContent = toStringHDMS(coordinate);
+  coords.append(code);
+  content.append(coords);
+
+  const attributes = morphometryFragment(props);
+  if (attributes) content.append(attributes);
 }
 
 map.on('click', function (evt) {
@@ -149,38 +202,21 @@ map.on('click', function (evt) {
   });
   if (!(feature instanceof Feature)) return;
 
-  const props = feature.values_ || {};
-  const hdms = toStringHDMS(coordinate);
-  const name = props.nombre ? escapeHtml(props.nombre) : 'Volcán';
-  const municipio = props.municipio ? escapeHtml(props.municipio) : '—';
-  content.innerHTML =
-    `<h4 class="popup-title">${name}</h4>` +
-    `<p class="popup-meta">Municipio: ${municipio}</p>` +
-    `<p class="popup-coords">Coordenadas: <code>${hdms}</code></p>` +
-    morphometryHtml(props);
+  renderPopupContent(feature.values_ || {}, coordinate);
   popup.setPosition(coordinate);
 });
-
-/** Escape user/feature-provided strings before injecting them as HTML. */
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 ////////////////////////////////////////////
 ////              Cursor                ////
 ////////////////////////////////////////////
 
 const changeCursorStyle = function (pixel, target) {
-  const feature = target.closest('.ol-control')
-    ? undefined
-    : map.forEachFeatureAtPixel(pixel, function (f) {
-        return f;
-      });
+  const feature =
+    target instanceof Element && !target.closest('.ol-control')
+      ? map.forEachFeatureAtPixel(pixel, function (f) {
+          return f;
+        })
+      : undefined;
   if (feature instanceof Feature) {
     target.style.cursor = 'pointer';
   } else {
@@ -200,11 +236,12 @@ const info = document.getElementById('info');
 
 let currentFeature;
 const displayFeatureInfo = function (pixel, target) {
-  const feature = target.closest('.ol-control')
-    ? undefined
-    : map.forEachFeatureAtPixel(pixel, function (f) {
-        return f;
-      });
+  const feature =
+    target instanceof Element && !target.closest('.ol-control')
+      ? map.forEachFeatureAtPixel(pixel, function (f) {
+          return f;
+        })
+      : undefined;
   if (feature instanceof Feature) {
     info.style.left = pixel[0] + 10 + 'px';
     info.style.top = pixel[1] + 'px';
@@ -245,18 +282,13 @@ map.on('click', function (evt) {
   if (currentFeature) {
     clearIcon();
   }
-  const fl = map.forEachFeatureAtPixel(evt.pixel, function (feature, lyr) {
+  const hit = map.forEachFeatureAtPixel(evt.pixel, function (feature, lyr) {
     return [feature, lyr];
   });
-  try {
-    const clickedFeature = fl[0];
-    selectedFeature = clickedFeature;
-    if (clickedFeature) {
-      console.log(clickedFeature);
-      clickedFeature.setStyle(volcanoFeatureStyle(true));
-    }
-  } catch (e) {
-    console.error(e);
+  const clickedFeature = hit ? hit[0] : undefined;
+  selectedFeature = clickedFeature;
+  if (clickedFeature instanceof Feature) {
+    clickedFeature.setStyle(volcanoFeatureStyle(true));
   }
 });
 
@@ -271,3 +303,36 @@ function clearIcon() {
 ////////////////////////////////////////////
 
 buildMunicipalitySidebar(map, layer);
+
+// Sidebar toggle: responsive default is open on desktop, closed on mobile.
+// (Moved out of an inline <script> so the page can run without
+// 'unsafe-inline' in script-src.)
+(function initPanelToggle() {
+  const body = document.body;
+  const toggle = document.getElementById('panel-toggle');
+  let open = window.innerWidth > 900;
+
+  function apply() {
+    body.classList.toggle('panel-open', open);
+    body.classList.toggle('panel-closed', !open);
+    if (toggle) {
+      toggle.textContent = open ? '\u2715' : '\u2630';
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+  }
+
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      open = !open;
+      apply();
+    });
+  }
+  window.addEventListener('resize', function () {
+    const wide = window.innerWidth > 900;
+    if (wide !== open) {
+      open = wide;
+      apply();
+    }
+  });
+  apply();
+})();

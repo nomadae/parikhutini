@@ -2,15 +2,20 @@
 // Unit test for the shared TIFF decode engine (src/tiff/decode.mjs).
 // The engine is the single source of truth used by both pages/dem-inspector
 // and this test, so the checks below must hold for the app too.
+//
 // Reference values (gdalinfo / osgeo.gdal):
 //   tancitaro_mde.tif: min 1694.7788 max 3844.9553 mean 2669.407 std 417.482, NoData -9999 (0 píxeles)
 //   nt/mde_nt.tif:    min 1918      max 4646      mean 2990.155 std 425.629, NoData -32768 (228982 píxeles)
-import { readFileSync } from 'node:fs';
+//
+// The rasters live in data/mde/, which is gitignored, so the fixture-dependent
+// checks are skipped when the files are absent (e.g. in CI). The validation
+// guards below always run.
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import { decodeDem } from '../src/tiff/decode.mjs';
+import { decodeDem, MAX_DEM_PIXELS } from '../src/tiff/decode.mjs';
 
 const require = createRequire(import.meta.url);
 const UTIF = require('../src/tiff/vendor/UTIF.js'); // UMD: module.exports = UTIF
@@ -33,6 +38,15 @@ function assertClose(actual, expected, tol, msg) {
     console.error(`  FALLO ${msg}: esperado ${expected} +-${tol}, obtenido ${actual}`);
   }
 }
+function assertThrows(fn, msg) {
+  let threw = false;
+  try {
+    fn();
+  } catch {
+    threw = true;
+  }
+  assert(threw, msg);
+}
 
 function decodeDemFile(filePath) {
   const buffer = readFileSync(filePath);
@@ -40,9 +54,31 @@ function decodeDemFile(filePath) {
   return decodeDem(UTIF, arrayBuffer);
 }
 
+// ---- input-validation guards (no fixtures required) ----
+console.log('guards de validación de entrada');
+assert(Number.isInteger(MAX_DEM_PIXELS) && MAX_DEM_PIXELS > 0, 'MAX_DEM_PIXELS está definido');
+assertThrows(() => decodeDem(UTIF, new ArrayBuffer(0)), 'un buffer vacío lanza un error controlado');
+assertThrows(
+  () => decodeDem(UTIF, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer),
+  'un buffer basura lanza un error controlado'
+);
+
+// ---- DEM fixtures (gitignored; skipped when absent) ----
+const TANCITARO = path.join(ROOT, 'data/mde/tancitaro_mde.tif');
+const NT = path.join(ROOT, 'data/mde/nt/mde_nt.tif');
+
+if (!existsSync(TANCITARO) || !existsSync(NT)) {
+  console.log(
+    'SKIP  fixtures de DEM ausentes (data/mde/ está en .gitignore); ' +
+      'coloca los rásteres y vuelve a ejecutar para las comprobaciones completas.'
+  );
+  console.log(failures === 0 ? 'TODO OK (sin fixtures)' : `${failures} comprobaciones fallidas`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
 // ---- tancitaro_mde.tif: strips, Float32 ----
 console.log('tancitaro_mde.tif (strip, Float32)');
-const t = decodeDemFile(path.join(ROOT, 'data/mde/tancitaro_mde.tif'));
+const t = decodeDemFile(TANCITARO);
 assert(t.width === 1208 && t.height === 1060, 'dimensiones 1208x1060');
 assert(t.bps === 32, 'bitsPorMuestra (t258) = 32');
 assert(t.sfmt === 3, 'sampleFormat (t339) = 3 (float)');
@@ -58,7 +94,7 @@ assertClose(t.stdDev, 417.4824, 0.5, 'desviación ~417.48');
 
 // ---- nt/mde_nt.tif: tiles 128x128, Int16 con NoData real ----
 console.log('nt/mde_nt.tif (tiled, Int16)');
-const n = decodeDemFile(path.join(ROOT, 'data/mde/nt/mde_nt.tif'));
+const n = decodeDemFile(NT);
 assert(n.width === 2249 && n.height === 2177, 'dimensiones 2249x2177');
 assert(n.bps === 16, 'bitsPorMuestra (t258) = 16');
 assert(n.sfmt === 2, 'sampleFormat (t339) = 2 (con signo)');

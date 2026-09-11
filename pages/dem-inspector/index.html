@@ -121,7 +121,7 @@
         
         <div class="upload-section">
             <input type="file" id="tiffFile" accept=".tiff,.tif" style="display: none;">
-            <button onclick="document.getElementById('tiffFile').click()">Seleccionar archivo TIFF MDE</button>
+            <button id="btnSelectFile" type="button">Seleccionar archivo TIFF MDE</button>
             <p id="fileName">No se ha seleccionado ningún archivo</p>
         </div>
 
@@ -154,10 +154,10 @@
 
         <div class="info-panel">
             <h3>Herramientas de Análisis</h3>
-            <button onclick="calculateSlope()">Calcular Pendientes</button>
-            <button onclick="calculateAspect()">Calcular Orientación</button>
-            <button onclick="findHighestPoint()">Punto Más Alto</button>
-            <button onclick="findLowestPoint()">Punto Más Bajo</button>
+            <button id="btnSlope" type="button">Calcular Pendientes</button>
+            <button id="btnAspect" type="button">Calcular Orientación</button>
+            <button id="btnHighest" type="button">Punto Más Alto</button>
+            <button id="btnLowest" type="button">Punto Más Bajo</button>
             <div id="analysisResults"></div>
         </div>
     </div>

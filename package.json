@@ -3,18 +3,20 @@
   "version": "1.0.0",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/copy-static.mjs",
+    "build:local": "vite build && node scripts/copy-static.mjs --with-dems",
     "serve": "vite preview",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node tests/tiff-decode.test.mjs",
-    "test:e2e": "node tests/dem-inspector.e2e.mjs",
-    "postbuild": "node scripts/copy-static.mjs"
+    "test:e2e": "node tests/dem-inspector.e2e.mjs"
   },
   "devDependencies": {
     "vite": "^8.2.2"
   },
   "dependencies": {
-    "dotenv": "^16.5.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
+    "bootstrap": "^5.3.8",
     "geotiff": "^3.0.5",
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.3",

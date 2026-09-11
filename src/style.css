@@ -467,6 +467,16 @@ body.panel-closed .pane { transform: translateX(100%); }
 /* ------------------------------------------------------------------ */
 /*  Map attribution                                                    */
 /* ------------------------------------------------------------------ */
+.map-logo {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 999;
+}
+
+/* The popup markup is parked here until OpenLayers takes it over. */
+.popup-host { display: none; }
+
 .map-attribution {
   position: absolute;
   left: 10px;

@@ -29,12 +29,25 @@ function setLoadedDem(decoded) {
 }
 
 // ---------- boot ----------
+function wireButton(id, handler) {
+  const button = document.getElementById(id);
+  if (button) button.addEventListener('click', handler);
+}
+
 function init() {
   const canvas = document.getElementById('elevationCanvas');
   const profileCanvas = document.getElementById('profileCanvas');
   canvasContext = canvas.getContext('2d');
   profileContext = profileCanvas.getContext('2d');
   document.getElementById('tiffFile').addEventListener('change', handleFileSelect);
+
+  // Wired here instead of inline onclick attributes so the page can run under
+  // a Content-Security-Policy without 'unsafe-inline' for scripts.
+  wireButton('btnSelectFile', () => document.getElementById('tiffFile').click());
+  wireButton('btnSlope', calculateSlope);
+  wireButton('btnAspect', calculateAspect);
+  wireButton('btnHighest', findHighestPoint);
+  wireButton('btnLowest', findLowestPoint);
 }
 init();
 
@@ -55,26 +68,36 @@ async function handleFileSelect(event) {
 }
 
 async function processTIFF(arrayBuffer) {
-  try {
-    const decoded = decodeDem(window.UTIF, arrayBuffer);
-    setLoadedDem(decoded);
-    displayFileInfo();
-    visualizeElevation();
-    updateStatistics();
-  } catch (error) {
-    throw new Error('Formato TIFF no compatible o archivo corrupto');
-  }
+  // Errors (including the size/format guards in the decode engine) propagate to
+  // handleFileSelect, which shows the concrete message instead of a generic one.
+  const decoded = decodeDem(window.UTIF, arrayBuffer);
+  setLoadedDem(decoded);
+  displayFileInfo();
+  visualizeElevation();
+  updateStatistics();
 }
 
 // ---------- info & rendering ----------
+/** Replace an element's children with plain-text paragraphs (no HTML parsing). */
+function showParagraphs(elementId, rows) {
+  const fragment = document.createDocumentFragment();
+  for (const [label, value] of rows) {
+    const p = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = `${label}:`;
+    p.append(strong, ` ${value}`);
+    fragment.append(p);
+  }
+  document.getElementById(elementId).replaceChildren(fragment);
+}
+
 function displayFileInfo() {
-  const info = `
-      <p><strong>Dimensiones:</strong> ${metadata.width} × ${metadata.height} píxeles</p>
-      <p><strong>Rango de elevación:</strong> ${metadata.minElevation.toFixed(2)} - ${metadata.maxElevation.toFixed(2)} unidades</p>
-      <p><strong>Tipo de datos:</strong> ${metadata.dataType}</p>
-      <p><strong>Amplitud de elevación (máx − mín):</strong> ${(metadata.maxElevation - metadata.minElevation).toFixed(2)} unidades</p>
-  `;
-  document.getElementById('fileInfo').innerHTML = info;
+  showParagraphs('fileInfo', [
+    ['Dimensiones', `${metadata.width} × ${metadata.height} píxeles`],
+    ['Rango de elevación', `${metadata.minElevation.toFixed(2)} - ${metadata.maxElevation.toFixed(2)} unidades`],
+    ['Tipo de datos', metadata.dataType],
+    ['Amplitud de elevación (máx − mín)', `${(metadata.maxElevation - metadata.minElevation).toFixed(2)} unidades`],
+  ]);
 }
 
 function visualizeElevation() {
@@ -128,25 +151,25 @@ function getColorFromElevation(normalized) {
 // ---------- statistics ----------
 function updateStatistics() {
   const stats = calculateStatistics();
-  const statsHTML = `
-      <div class="stat-box">
-          <h4>Elevación Media</h4>
-          <p>${stats.mean.toFixed(2)}</p>
-      </div>
-      <div class="stat-box">
-          <h4>Desviación Estándar</h4>
-          <p>${stats.stdDev.toFixed(2)}</p>
-      </div>
-      <div class="stat-box">
-          <h4>Mediana</h4>
-          <p>${stats.median.toFixed(2)}</p>
-      </div>
-      <div class="stat-box">
-          <h4>Pendiente Media</h4>
-          <p>${stats.avgSlope.toFixed(2)}°</p>
-      </div>
-  `;
-  document.getElementById('statsContainer').innerHTML = statsHTML;
+  const boxes = [
+    ['Elevación Media', stats.mean.toFixed(2)],
+    ['Desviación Estándar', stats.stdDev.toFixed(2)],
+    ['Mediana', stats.median.toFixed(2)],
+    ['Pendiente Media', `${stats.avgSlope.toFixed(2)}°`],
+  ];
+
+  const fragment = document.createDocumentFragment();
+  for (const [label, value] of boxes) {
+    const box = document.createElement('div');
+    box.className = 'stat-box';
+    const heading = document.createElement('h4');
+    heading.textContent = label;
+    const value_ = document.createElement('p');
+    value_.textContent = value;
+    box.append(heading, value_);
+    fragment.append(box);
+  }
+  document.getElementById('statsContainer').replaceChildren(fragment);
 }
 
 function calculateStatistics() {
@@ -259,17 +282,34 @@ function drawElevationProfile(x) {
 }
 
 // ---------- analysis tools (page buttons) ----------
+function hasDem() {
+  return Boolean(elevationData) && Boolean(metadata.width && metadata.height);
+}
+
+/** Render analysis output as plain-text paragraphs (never parsed as HTML). */
+function showAnalysis(lines) {
+  const fragment = document.createDocumentFragment();
+  for (const line of lines) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    fragment.append(p);
+  }
+  document.getElementById('analysisResults').replaceChildren(fragment);
+}
+
 function calculateSlope() {
-  document.getElementById('analysisResults').innerHTML =
-    '<p>Análisis de pendientes calculado. Pendiente media: ' +
-    calculateStatistics().avgSlope.toFixed(2) +
-    '°</p>';
+  if (!hasDem()) {
+    showAnalysis(['Carga primero un archivo MDE para calcular las pendientes.']);
+    return;
+  }
+  showAnalysis([
+    `Análisis de pendientes calculado. Pendiente media: ${calculateStatistics().avgSlope.toFixed(2)}°`,
+  ]);
 }
 
 function calculateAspect() {
-  if (!elevationData || !metadata.width) {
-    document.getElementById('analysisResults').innerHTML =
-      '<p>Carga primero un archivo MDE para calcular la orientación.</p>';
+  if (!hasDem()) {
+    showAnalysis(['Carga primero un archivo MDE para calcular la orientación.']);
     return;
   }
   const w = metadata.width;
@@ -313,36 +353,41 @@ function calculateAspect() {
     }
   }
 
-  let result;
   if (valid === 0) {
-    result = '<p>No hay celdas válidas para calcular la orientación.</p>';
+    showAnalysis(['No hay celdas válidas para calcular la orientación.']);
   } else {
     let meanAspect = Math.atan2(sinSum, cosSum) * (180 / Math.PI);
     if (meanAspect < 0) meanAspect += 360;
     let dominant = 0;
     for (let i = 1; i < 8; i++) if (classes[i] > classes[dominant]) dominant = i;
-    result =
-      `<p>Orientación media: ${meanAspect.toFixed(1)}° (clase dominante: ${classNames[dominant]})</p>` +
-      `<p>Celdas válidas: ${valid.toLocaleString('es-MX')} · planas: ${flat.toLocaleString('es-MX')}</p>` +
-      '<p>Clases: ' + classNames.map((n, i) => `${n} ${classes[i].toLocaleString('es-MX')}`).join(' · ') + '</p>';
+    showAnalysis([
+      `Orientación media: ${meanAspect.toFixed(1)}° (clase dominante: ${classNames[dominant]})`,
+      `Celdas válidas: ${valid.toLocaleString('es-MX')} · planas: ${flat.toLocaleString('es-MX')}`,
+      'Clases: ' + classNames.map((n, i) => `${n} ${classes[i].toLocaleString('es-MX')}`).join(' · '),
+    ]);
   }
-  document.getElementById('analysisResults').innerHTML = result;
 }
 
 function findHighestPoint() {
+  if (!hasDem()) {
+    showAnalysis(['Carga primero un archivo MDE para localizar el punto más alto.']);
+    return;
+  }
   const maxIndex = elevationData.indexOf(metadata.maxElevation);
   const y = Math.floor(maxIndex / metadata.width);
   const x = maxIndex % metadata.width;
-  document.getElementById('analysisResults').innerHTML =
-    `<p>Punto más alto: (${x}, ${y}) - Elevación: ${metadata.maxElevation.toFixed(2)}</p>`;
+  showAnalysis([`Punto más alto: (${x}, ${y}) - Elevación: ${metadata.maxElevation.toFixed(2)}`]);
 }
 
 function findLowestPoint() {
+  if (!hasDem()) {
+    showAnalysis(['Carga primero un archivo MDE para localizar el punto más bajo.']);
+    return;
+  }
   const minIndex = elevationData.indexOf(metadata.minElevation);
   const y = Math.floor(minIndex / metadata.width);
   const x = minIndex % metadata.width;
-  document.getElementById('analysisResults').innerHTML =
-    `<p>Punto más bajo: (${x}, ${y}) - Elevación: ${metadata.minElevation.toFixed(2)}</p>`;
+  showAnalysis([`Punto más bajo: (${x}, ${y}) - Elevación: ${metadata.minElevation.toFixed(2)}`]);
 }
 
 // Page buttons use inline onclick attributes -> expose as globals.

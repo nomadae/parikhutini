@@ -1,32 +1,49 @@
 name: Build
 
+# The repository's default branch is `master`; the previous triggers used
+# `main`, so this workflow never ran.
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
+
+permissions:
+  contents: read
 
 env:
   CI: true
 
 jobs:
   build:
-    name: Build
+    name: Build & test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone Repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set Node.js Version
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Production build (compile check)
+        # CI has no production key. A throwaway value satisfies the
+        # production-mode assertion in vite.config.mjs; deploy pipelines inject
+        # the real VITE_MAPTILER_KEY secret. This bundle is never deployed.
+        env:
+          VITE_MAPTILER_KEY: ci-compile-check
         run: npm run build
