@@ -24,14 +24,55 @@ camera.position.z = 500;
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+// Cap the backing buffer at 2x: high-DPI phones report 3x, which costs a lot
+// of fill rate for a difference that is hard to see on a phone screen.
+// Size from the document element: it is the viewport the page is actually
+// laid out in, whereas window.innerWidth is not yet reliable during startup.
+function applyRendererSize() {
+  const de = document.documentElement;
+  const width = de.clientWidth || window.innerWidth;
+  const height = de.clientHeight || window.innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(width, height);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+applyRendererSize();
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+
+// Options sheet ("Ajustes"): on phones the panel is hidden so it does not
+// cover the terrain; the button opens it and the sheet closes itself.
+const controlsPanel = document.getElementById('controls');
+const controlsToggle = document.getElementById('controlsToggle');
+const controlsClose = document.getElementById('controlsClose');
+
+function setControlsOpen(open) {
+  document.body.classList.toggle('controls-open', open);
+  controlsToggle.setAttribute('aria-expanded', String(open));
+}
+
+controlsToggle.addEventListener('click', () => setControlsOpen(!document.body.classList.contains('controls-open')));
+controlsClose.addEventListener('click', () => setControlsOpen(false));
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('controls-open')) {
+    setControlsOpen(false);
+  }
+});
+
+// A click outside the options panel dismisses the mobile sheet. The on-screen
+// controls stay available underneath once it closes.
+window.addEventListener('pointerdown', (event) => {
+  if (!document.body.classList.contains('controls-open')) return;
+  if (controlsPanel.contains(event.target) || controlsToggle.contains(event.target)) return;
+  setControlsOpen(false);
+});
 
 // Input state tracking
 const PAN_SPEED = 1.5;
@@ -99,8 +140,11 @@ Object.entries(visualButtons).forEach(([id, action]) => {
   btn.addEventListener('mousedown', () => setPressed(true));
   btn.addEventListener('mouseup', () => setPressed(false));
   btn.addEventListener('mouseleave', () => setPressed(false));
-  btn.addEventListener('touchstart', (e) => { e.preventDefault(); setPressed(true); });
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); setPressed(true); }, { passive: false });
   btn.addEventListener('touchend', () => setPressed(false));
+  // A cancelled/slid-off touch would otherwise leave the button stuck down.
+  btn.addEventListener('touchcancel', () => setPressed(false));
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
 });
 
 // Lighting
@@ -346,9 +390,8 @@ function animate() {
 }
 animate();
 
-// Handle window resize
-window.addEventListener('resize', function () {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// Handle window resize (also fires when mobile browser chrome shows/hides)
+window.addEventListener('resize', applyRendererSize);
+window.addEventListener('orientationchange', applyRendererSize);
+// Startup safety net: re-measure once every resource has settled.
+window.addEventListener('load', applyRendererSize);
