@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Filesystem scan only: the working tree is what ships, and scanning
           # history would keep flagging the already-rotated historical key
