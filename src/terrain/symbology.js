@@ -16,7 +16,7 @@
 export const PALETTES = [
   {
     id: 'hypsometric',
-    name: 'Hypsometric tints',
+    name: 'Tintes hipsométricos',
     stops: [
       { at: 0, color: '#2c6e3f' }, // tropical lowland / deep green
       { at: 1200, color: '#58a05a' }, // montane forest
@@ -30,7 +30,7 @@ export const PALETTES = [
   },
   {
     id: 'heat',
-    name: 'Incandescent (heat)',
+    name: 'Incandescente (calor)',
     stops: [
       { at: 0, color: '#3f0d0d' },
       { at: 1400, color: '#a61c1c' },
@@ -42,7 +42,7 @@ export const PALETTES = [
   },
   {
     id: 'gray',
-    name: 'Grayscale relief',
+    name: 'Relieve en escala de grises',
     stops: [
       { at: 0, color: '#1e1e1e' },
       { at: 1100, color: '#4a4a4a' },

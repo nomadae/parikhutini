@@ -12,6 +12,16 @@ import { colorAtMeters, getPalette, DEFAULT_PALETTE_ID } from './symbology.js';
  */
 export async function loadTIFF(fileUrl) {
   const response = await fetch(fileUrl);
+  // A static host answers a missing raster with an HTML page (404). Without
+  // this guard the GeoTIFF parser fails with a cryptic message, so surface the
+  // HTTP status and let callers explain what to do about it.
+  if (!response.ok) {
+    const error = new Error(
+      response.statusText ? `HTTP ${response.status} ${response.statusText}` : `HTTP ${response.status}`
+    );
+    error.status = response.status;
+    throw error;
+  }
   const arrayBuffer = await response.arrayBuffer();
   const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
   const image = await tiff.getImage();
