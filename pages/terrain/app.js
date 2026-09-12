@@ -119,7 +119,46 @@ paletteSelect.addEventListener('change', function (e) {
 
 function showLoadError(error) {
   loading.style.display = 'block';
-  loading.textContent = `Error loading TIFF: ${error.message}`;
+  loading.replaceChildren();
+
+  const heading = document.createElement('h2');
+  heading.textContent = 'No se pudo cargar el modelo de elevación';
+
+  const explanation = document.createElement('p');
+  if (Number.isInteger(error.status)) {
+    explanation.textContent =
+      `El archivo del MDE no está disponible en este sitio (HTTP ${error.status}). ` +
+      'Es probable que los rásteres no se hayan publicado junto con el resto del sitio.';
+  } else {
+    explanation.textContent =
+      `No se pudo leer el archivo del MDE: ${error.message}. ` +
+      'Puede ser un problema de red o un formato no compatible.';
+  }
+
+  const hint = document.createElement('p');
+  hint.textContent =
+    'Prueba con otro MDE del selector, o abre el inspector y carga un GeoTIFF de tu equipo.';
+
+  const actions = document.createElement('div');
+  actions.className = 'loading-actions';
+
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.textContent = 'Reintentar';
+  retry.addEventListener('click', () => loadDEM(demSelect.value));
+  actions.append(retry);
+
+  const inspector = document.createElement('a');
+  inspector.href = '../dem-inspector/';
+  inspector.textContent = 'Abrir el inspector de MDE';
+  actions.append(inspector);
+
+  const back = document.createElement('a');
+  back.href = '../../';
+  back.textContent = 'Volver al mapa';
+  actions.append(back);
+
+  loading.append(heading, explanation, hint, actions);
   console.error(error);
 }
 
@@ -164,9 +203,9 @@ function updateLegend() {
   const palette = getPalette(currentPaletteId);
   document.getElementById('legendTitle').textContent = palette.name;
   document.getElementById('legendMin').textContent =
-    `${Math.round(minElevation).toLocaleString('en-US')} m`;
+    `${Math.round(minElevation).toLocaleString('es-MX')} m`;
   document.getElementById('legendMax').textContent =
-    `${Math.round(maxElevation).toLocaleString('en-US')} m`;
+    `${Math.round(maxElevation).toLocaleString('es-MX')} m`;
 
   const stops = legendStops(palette, minElevation, maxElevation);
   document.getElementById('legendBar').style.background =
@@ -176,7 +215,7 @@ function updateLegend() {
 async function loadDEM(tiffUrl) {
   const token = ++loadToken;
   loading.style.display = 'block';
-  loading.textContent = `Loading ${tiffUrl} ...`;
+  loading.textContent = `Cargando ${tiffUrl}…`;
   try {
     const loaded = await loadTIFF(tiffUrl);
     if (token !== loadToken) return;

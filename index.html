@@ -185,6 +185,37 @@
             </div>
           </section>
 
+          <section class="panel-section" id="herramientas">
+            <h2 class="panel-section-header">
+              <button type="button" class="panel-section-toggle" data-bs-toggle="collapse" data-bs-target="#sec-herramientas" aria-expanded="true" aria-controls="sec-herramientas">
+                <span>Herramientas del terreno</span>
+                <span class="panel-section-chevron" aria-hidden="true"></span>
+              </button>
+            </h2>
+            <div id="sec-herramientas" class="collapse show">
+              <p>Dos herramientas para mirar el relieve con más detalle. Cada una se abre en su propia pestaña, así no pierdes el mapa.</p>
+              <div class="tool-list">
+                <a class="tool-link" href="./pages/terrain/" target="_blank" rel="noopener">
+                  <span class="tool-link-icon" aria-hidden="true">🏔️</span>
+                  <span class="tool-link-body">
+                    <span class="tool-link-title">Visor 3D del terreno<span class="tool-link-new" aria-hidden="true">↗</span></span>
+                    <span class="tool-link-desc">Recorre en tres dimensiones el modelo digital de elevación de cinco volcanes. Arrastra para girar la escena, usa la rueda para acercarte y cambia la escala de altura para exagerar el relieve.</span>
+                    <span class="tool-link-hint">Se abre en una pestaña nueva</span>
+                  </span>
+                </a>
+                <a class="tool-link" href="./pages/dem-inspector/" target="_blank" rel="noopener">
+                  <span class="tool-link-icon" aria-hidden="true">📊</span>
+                  <span class="tool-link-body">
+                    <span class="tool-link-title">Inspector de MDE<span class="tool-link-new" aria-hidden="true">↗</span></span>
+                    <span class="tool-link-desc">Carga un archivo GeoTIFF de tu equipo para ver el mapa de elevación, las estadísticas del terreno y el perfil de un corte vertical al hacer clic sobre el mapa.</span>
+                    <span class="tool-link-hint">Se abre en una pestaña nueva</span>
+                  </span>
+                </a>
+              </div>
+              <p class="panel-note">El visor 3D descarga el modelo digital de elevación (MDE) del volcán elegido, por lo que la primera carga puede tardar unos segundos. El inspector funciona con archivos GeoTIFF que ya tengas en tu equipo.</p>
+            </div>
+          </section>
+
           <section class="panel-section" id="referencias">
             <h2 class="panel-section-header">
               <button type="button" class="panel-section-toggle" data-bs-toggle="collapse" data-bs-target="#sec-referencias" aria-expanded="false" aria-controls="sec-referencias">

@@ -257,6 +257,81 @@ body.panel-closed .pane { transform: translateX(100%); }
 }
 
 /* ------------------------------------------------------------------ */
+/*  Tool links (sidebar → standalone pages, opened in a new tab)       */
+/* ------------------------------------------------------------------ */
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Extra specificity (`a.tool-link`) to win over the generic
+   `.panel-section a` link styling above. */
+.panel-section a.tool-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--ink-3);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.panel-section a.tool-link:hover,
+.panel-section a.tool-link:focus-visible {
+  background: var(--ink-4);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.panel-section a.tool-link:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+.tool-link-icon {
+  flex: 0 0 auto;
+  font-size: 1.4rem;
+  line-height: 1.25;
+}
+
+.tool-link-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-link-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-head);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.tool-link-new {
+  color: var(--accent-2);
+  font-size: 0.85rem;
+}
+
+.tool-link-desc {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.tool-link-hint {
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.2px;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Municipality list (built by src/map/sidebar.js)                    */
 /* ------------------------------------------------------------------ */
 .list-group { display: flex; flex-direction: column; gap: 8px; }
