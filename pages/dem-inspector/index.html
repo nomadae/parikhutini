@@ -128,6 +128,35 @@
         button:hover {
             background: #2980b9;
         }
+
+        /* Phones: reclaim the doubled page/container padding, and move the
+           elevation profile below the map instead of letting it cover it. */
+        @media (max-width: 700px) {
+            body { padding: 10px; }
+            .container { padding: 14px; border-radius: 8px; }
+            h1 { font-size: 1.3rem; }
+            .upload-section { padding: 14px; margin: 14px 0; }
+            .info-panel { padding: 12px; }
+            .info-panel p { margin: 6px 0; font-size: 0.92rem; }
+
+            .visualization { display: block; margin: 14px 0; }
+            .elevation-profile {
+                position: static;
+                width: auto;
+                max-width: none;
+                margin-top: 12px;
+            }
+            #elevationCanvas { max-height: 60vh; }
+
+            .stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+            .stat-box { padding: 8px; }
+            .stat-box h4 { margin: 0 0 4px; font-size: 0.82rem; }
+            .stat-box p { margin: 0; font-size: 1.05rem; }
+
+            .legend { font-size: 12px; }
+            button { width: 100%; margin: 6px 0; padding: 12px 20px; }
+            #analysisResults p { font-size: 0.92rem; }
+        }
     </style>
 </head>
 <body>
