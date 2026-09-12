@@ -23,6 +23,20 @@
             color: #2c3e50;
             text-align: center;
         }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 8px;
+            color: #2980b9;
+            font-size: 14px;
+            text-decoration: none;
+            border-bottom: 1px dotted rgba(41, 128, 185, 0.5);
+        }
+        .back-link:hover { color: #1c5f8a; border-bottom-style: solid; }
+        .back-link:focus-visible {
+            outline: 2px solid #2980b9;
+            outline-offset: 2px;
+            border-radius: 3px;
+        }
         .upload-section {
             text-align: center;
             margin: 20px 0;
@@ -118,6 +132,7 @@
 </head>
 <body>
     <div class="container">
+        <a class="back-link" href="../../">&larr; Volver al mapa</a>
         <h1>📊 Visualizador de Modelo Digital de Elevación (MDE)</h1>
         
         <div class="upload-section">
