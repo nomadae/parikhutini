@@ -18,6 +18,11 @@
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   --font-head: "Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Notch / home-indicator insets (0 on devices without them). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 * { box-sizing: border-box; }
@@ -27,6 +32,15 @@ html, body {
   height: 100%;
   font-family: var(--font-body);
   background: var(--ink);
+  /* The app owns the viewport: the map is fixed full-screen and the sidebar
+     scrolls on its own. Without this, the off-canvas drawer (moved out with
+     translateX) extends the scrollable area and lets phones pan sideways. */
+  overflow: hidden;
+}
+
+/* Track the dynamic browser UI (address bar) instead of the static 100%. */
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
 }
 
 /* ------------------------------------------------------------------ */
@@ -53,6 +67,19 @@ html, body {
   overflow-y: auto;
   transition: transform 0.28s ease;
   box-shadow: -12px 0 32px rgba(0, 0, 0, 0.3);
+  /* Above the map, the scrim and the OpenLayers controls; the toggle (30)
+     stays above the pane so it can always close the drawer. */
+  z-index: 20;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Drawer backdrop (small screens only): tapping it dismisses the panel. */
+.panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: none;
+  background: rgba(6, 9, 13, 0.5);
 }
 
 .pane::-webkit-scrollbar { width: 10px; }
@@ -522,9 +549,9 @@ body.panel-closed .pane { transform: translateX(100%); }
 /* ------------------------------------------------------------------ */
 .panel-toggle {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 10;
+  top: calc(14px + var(--safe-top));
+  right: calc(14px + var(--safe-right));
+  z-index: 30;
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -538,14 +565,18 @@ body.panel-closed .pane { transform: translateX(100%); }
   transition: background 0.2s ease, transform 0.2s ease;
 }
 .panel-toggle:hover { background: var(--accent); transform: scale(1.05); }
+.panel-toggle:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Map attribution                                                    */
 /* ------------------------------------------------------------------ */
 .map-logo {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  left: calc(10px + var(--safe-left));
+  bottom: calc(10px + var(--safe-bottom));
   z-index: 999;
 }
 
@@ -577,9 +608,64 @@ body.panel-closed .pane { transform: translateX(100%); }
   #map { right: 0; }
   .pane {
     width: min(85vw, 380px);
+    max-width: 100%;
     transform: translateX(100%);   /* hidden by default on small screens */
   }
   body.panel-open .pane { transform: translateX(0); }
   body.panel-closed .pane { transform: translateX(100%); }
+
+  /* Dim the map and let a tap outside the drawer close it. */
+  body.panel-open .panel-scrim { display: block; }
+
+  /* The close button floats over the drawer header: reserve its footprint so
+     it never sits on top of the brand text. */
+  .panel-header { padding: 16px 64px 15px 16px; }
+  .panel-brand { gap: 12px; }
+  .panel-logo { width: 50px; height: 50px; }
+
+  .panel-body { padding: 0 14px calc(24px + var(--safe-bottom)); }
+  .panel-section { padding: 16px 14px 14px; margin-top: 14px; }
+
+  /* Municipality list: comfortable, full-width tap targets. */
+  #lista-municipios .btn { display: block; width: 100%; }
+  #lista-municipios .badge {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    line-height: 1.3;
+    text-align: left;
+    white-space: normal;
+  }
+
+  /* Popup: a readable column on phones, but never wider than the screen. */
+  .ol-popup {
+    min-width: min(260px, calc(100vw - 32px));
+    max-width: min(320px, calc(100vw - 32px));
+    padding: 14px 16px;
+  }
+
+  /* A popup anchored near the top can reach the corner where the toggle
+     floats; hide the toggle while a popup is open so the popup's own close
+     button is never obscured (tap the map to dismiss the popup). */
+  body.popup-open .panel-toggle { display: none; }
+
   .map-attribution { left: 8px; bottom: 8px; }
+}
+
+/* Very narrow phones: keep the gradient title on one line. */
+@media (max-width: 400px) {
+  .panel-title { font-size: 1.35rem; }
+  .panel-subtitle { font-size: 0.7rem; letter-spacing: 0.4px; }
+  .panel-body { padding: 0 12px calc(22px + var(--safe-bottom)); }
+  .panel-section { padding: 14px 12px 12px; }
+}
+
+/* Short viewports (landscape phones): tighten the vertical rhythm. */
+@media (max-height: 520px) {
+  .panel-header { padding-top: 12px; padding-bottom: 11px; }
+  .panel-logo { width: 44px; height: 44px; }
+  .panel-section { margin-top: 10px; }
 }

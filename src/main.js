@@ -99,6 +99,12 @@ closer.onclick = function () {
 
 map.addOverlay(popup);
 
+// Track popup visibility on the body so small screens can yield the corner
+// where the floating panel toggle would otherwise cover the popup.
+popup.on('change:position', function () {
+  document.body.classList.toggle('popup-open', popup.getPosition() !== undefined);
+});
+
 // ------------------------------------------------------------------
 //  Morphometry from the volcano catalog (data/all.json fields wco,
 //  wcr, hco, vol, h_o). Catalog units are km / km^3; h_o is the
@@ -200,7 +206,12 @@ map.on('click', function (evt) {
   const feature = map.forEachFeatureAtPixel(evt.pixel, function (f) {
     return f;
   });
-  if (!(feature instanceof Feature)) return;
+  if (!(feature instanceof Feature)) {
+    // Tapping empty terrain dismisses the open popup (the popup covers the
+    // toggle on narrow screens, so it must be easy to close).
+    popup.setPosition(undefined);
+    return;
+  }
 
   renderPopupContent(feature.values_ || {}, coordinate);
   popup.setPosition(coordinate);
@@ -255,8 +266,12 @@ const displayFeatureInfo = function (pixel, target) {
   currentFeature = feature;
 };
 
+// Touch devices have no hover: the tooltip would stay stuck after a tap (no
+// pointerleave) and duplicate the popup title, so it is pointer-only.
+const pointerCapable = window.matchMedia('(hover: hover) and (pointer: fine)');
+
 map.on('pointermove', function (evt) {
-  if (evt.dragging) {
+  if (!pointerCapable.matches || evt.dragging) {
     info.style.visibility = 'hidden';
     currentFeature = undefined;
     return;
@@ -265,6 +280,7 @@ map.on('pointermove', function (evt) {
 });
 
 map.on('click', function (evt) {
+  if (!pointerCapable.matches) return;
   displayFeatureInfo(evt.pixel, evt.originalEvent.target);
 });
 
@@ -302,15 +318,17 @@ function clearIcon() {
 ////          Panel Controls           /////
 ////////////////////////////////////////////
 
-buildMunicipalitySidebar(map, layer);
-
 // Sidebar toggle: responsive default is open on desktop, closed on mobile.
 // (Moved out of an inline <script> so the page can run without
 // 'unsafe-inline' in script-src.)
+const mobilePanel = window.matchMedia('(max-width: 900px)');
+let setPanelOpen = () => {};
+
 (function initPanelToggle() {
   const body = document.body;
   const toggle = document.getElementById('panel-toggle');
-  let open = window.innerWidth > 900;
+  const scrim = document.getElementById('panel-scrim');
+  let open = !mobilePanel.matches;
 
   function apply() {
     body.classList.toggle('panel-open', open);
@@ -318,21 +336,36 @@ buildMunicipalitySidebar(map, layer);
     if (toggle) {
       toggle.textContent = open ? '\u2715' : '\u2630';
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.setAttribute('aria-label', open ? 'Ocultar el panel' : 'Mostrar el panel');
     }
   }
 
+  setPanelOpen = (next) => {
+    open = next;
+    apply();
+  };
+
   if (toggle) {
-    toggle.addEventListener('click', function () {
-      open = !open;
-      apply();
-    });
+    toggle.addEventListener('click', () => setPanelOpen(!open));
   }
-  window.addEventListener('resize', function () {
-    const wide = window.innerWidth > 900;
-    if (wide !== open) {
-      open = wide;
-      apply();
-    }
+  if (scrim) {
+    scrim.addEventListener('click', () => setPanelOpen(false));
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && open && mobilePanel.matches) setPanelOpen(false);
+  });
+  // Crossing the breakpoint resets the drawer to the layout's default.
+  mobilePanel.addEventListener('change', (event) => {
+    open = !event.matches;
+    apply();
   });
   apply();
 })();
+
+buildMunicipalitySidebar(map, layer, {
+  // On phones the drawer covers the map, so close it once a volcano is picked
+  // to reveal the recentred map.
+  onSelectVolcano() {
+    if (mobilePanel.matches) setPanelOpen(false);
+  },
+});

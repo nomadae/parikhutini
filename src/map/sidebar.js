@@ -1,8 +1,13 @@
 /**
  * Sidebar: volcanoes grouped by municipio (Bootstrap collapse list).
  * Reads features once the vector source is ready, then builds the DOM.
+ * @param {import('ol/Map').default} map
+ * @param {import('ol/layer/Vector').default} layer
+ * @param {{ onSelectVolcano?: () => void }} [options] called after a volcano
+ *   is chosen (used by the portal to close the mobile drawer).
  */
-export function buildMunicipalitySidebar(map, layer) {
+export function buildMunicipalitySidebar(map, layer, options = {}) {
+  const { onSelectVolcano } = options;
   const collapseMuns = document.getElementById('lista-municipios');
   const vectorSource = layer.getSource();
 
@@ -99,6 +104,8 @@ export function buildMunicipalitySidebar(map, layer) {
             map.getView().setCenter(volcano.coords);
             map.getView().setZoom(14);
           }
+
+          if (onSelectVolcano) onSelectVolcano();
         };
 
         btn.appendChild(badge);

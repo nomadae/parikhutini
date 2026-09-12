@@ -3,7 +3,7 @@
     <head>
       <meta charset="UTF-8">
       <meta http-equiv="content-language" content="es-mx">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
       
       <title>Parhikutini | Volcanes de Michoacán</title>
       <!-- All CSS/JS/fonts are bundled and self-hosted (see src/main.js):
@@ -127,6 +127,9 @@
           <div id="popup-content"></div>
         </div>
       </div>
+      <!-- Tap-to-dismiss backdrop for the sidebar drawer on small screens
+           (hidden on desktop; see .panel-scrim in src/style.css). -->
+      <div id="panel-scrim" class="panel-scrim" aria-hidden="true"></div>
       <div id="pane" class="pane">
         <header class="panel-header">
           <div class="panel-brand">
