@@ -75,7 +75,7 @@ window.addEventListener('pointerdown', (event) => {
 });
 
 // Input state tracking
-const PAN_SPEED = 1.5;
+const PAN_SPEED = 3.0;
 const ZOOM_SPEED = 3.0;
 const ORIENTATION_SPEED = 0.01;
 const keysPressed = {};
