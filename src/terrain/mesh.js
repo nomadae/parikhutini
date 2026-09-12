@@ -39,8 +39,6 @@ export async function loadTIFF(fileUrl) {
     normalizedData[i] = (nodata !== null && val === nodata) || range === 0 ? 0 : (val - min) / range;
   }
 
-  console.log(`Loaded TIFF: ${width}x${height}, Elevation range: ${min} to ${max}`);
-
   return { width, height, data: normalizedData, minElevation: min, maxElevation: max };
 }
 

@@ -20,6 +20,35 @@ function readNoData(ifd) {
 }
 
 /**
+ * Hard ceiling on raster size. The inspector decodes files chosen by the
+ * user, and every dimension comes from the (untrusted) TIFF header, so a
+ * crafted file must not be able to request an unbounded allocation or an
+ * unbounded main-thread loop. 25 MP ≈ 100 MB for a Float32 raster, which is
+ * ~5x larger than the biggest shipped DEM.
+ */
+export const MAX_DEM_PIXELS = 25_000_000;
+
+/** Reject implausible dimensions before any buffer is sized from them. */
+function assertRasterSize(width, height, bps, data) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+    throw new Error('Dimensiones del TIFF inválidas');
+  }
+  if (width * height > MAX_DEM_PIXELS) {
+    throw new Error(
+      `TIFF demasiado grande: ${width}×${height} px ` +
+        `(máximo ${MAX_DEM_PIXELS.toLocaleString('en-US')} px).`
+    );
+  }
+  const bytesPerSample = bps / 8;
+  if (![1, 2, 4].includes(bytesPerSample)) {
+    throw new Error(`Bits por muestra no soportados: ${bps}`);
+  }
+  if (!data || data.byteLength < width * height * bytesPerSample) {
+    throw new Error('Los datos del TIFF están incompletos o corruptos');
+  }
+}
+
+/**
  * Decode the first image of a TIFF/GeoTIFF into an elevation typed array.
  *
  * @param {object} UTIF UTIF decoder API (decode/decodeImage)
@@ -31,6 +60,7 @@ function readNoData(ifd) {
  */
 export function decodeDem(UTIF, arrayBuffer) {
   const ifds = UTIF.decode(arrayBuffer);
+  if (!ifds || ifds.length === 0) throw new Error('El archivo no contiene imágenes TIFF');
   UTIF.decodeImage(arrayBuffer, ifds[0]);
   const ifd = ifds[0];
 
@@ -38,6 +68,8 @@ export function decodeDem(UTIF, arrayBuffer) {
   const height = ifd.height;
   const bps = ifd['t258'] ? ifd['t258'][0] : 8; // bits por muestra
   const sfmt = ifd['t339'] ? ifd['t339'][0] : 1; // 1=sin signo, 2=con signo, 3=float
+
+  assertRasterSize(width, height, bps, ifd.data);
 
   // ifds[0].data contiene las muestras crudas ya en orden little-endian:
   // UTIF.js intercambia los 16-bit big-endian en decodeImage. Creamos una

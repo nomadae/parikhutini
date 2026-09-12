@@ -1,0 +1,20 @@
+# gitleaks configuration — https://github.com/gitleaks/gitleaks
+#
+# `useDefault = true` keeps the full built-in rule set; the allowlist below only
+# excludes paths that are vendored, generated, or third-party, so our own
+# source is always scanned. Do not add allowlist entries for real credentials.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Vendored, generated and dependency paths (no first-party secrets)"
+paths = [
+  '''node_modules/''',
+  '''dist/''',
+  '''venv/''',
+  '''\.npm-cache/''',
+  '''__pycache__/''',
+  '''data/mde/''',
+  '''package-lock\.json''',
+  '''src/tiff/vendor/UTIF\.js''',
+]

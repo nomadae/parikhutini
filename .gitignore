@@ -3,6 +3,7 @@ dist
 .env
 venv/
 .vscode/
+.npm-cache/
 data/heightmap.json
 volcano_heightmap.npy
 volcano_heightmap.png

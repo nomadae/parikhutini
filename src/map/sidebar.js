@@ -32,20 +32,23 @@ export function buildMunicipalitySidebar(map, layer) {
 
   return sourceReady(vectorSource).then(() => {
     // Group features by municipio, dropping anonymous / unplaced entries.
-    const byMunicipio = {};
+    // A Map (not a plain object) keeps untrusted attribute values such as
+    // "__proto__" from colliding with Object.prototype.
+    const byMunicipio = new Map();
     for (const feature of vectorSource.getFeatures()) {
       const props = feature.values_ || {};
       if (!props.nombre || !props.municipio) continue;
-      if (!byMunicipio[props.municipio]) byMunicipio[props.municipio] = [];
+      const municipio = String(props.municipio);
+      if (!byMunicipio.has(municipio)) byMunicipio.set(municipio, []);
       const coords = feature.getGeometry().getCoordinates();
-      byMunicipio[props.municipio].push({ nombre: props.nombre, coords });
+      byMunicipio.get(municipio).push({ nombre: props.nombre, coords });
     }
 
-    const municipios = Object.keys(byMunicipio).sort();
+    const municipios = [...byMunicipio.keys()].sort();
     let activeBadge = null;
 
     municipios.forEach((municipio, i) => {
-      const volcanoes = byMunicipio[municipio].sort((a, b) =>
+      const volcanoes = byMunicipio.get(municipio).sort((a, b) =>
         a.nombre.localeCompare(b.nombre, 'es')
       );
 
