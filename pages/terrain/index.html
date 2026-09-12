@@ -195,11 +195,139 @@
             background: rgba(255, 255, 255, 0.6);
         }
 
+        /* "?" help button, kept next to the viewer title. */
+        .info-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .help-toggle {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: inline-flex;
+            flex: 0 0 auto;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            height: 22px;
+            justify-content: center;
+            line-height: 1;
+            padding: 0;
+            width: 22px;
+        }
+        .help-toggle:hover { background: rgba(255, 255, 255, 0.32); }
+        .help-toggle:focus-visible {
+            outline: 2px solid #7fe3ff;
+            outline-offset: 2px;
+        }
+
+        /* Help dialog. Opaque so the text stays legible over the terrain. */
+        .help-dialog {
+            background: #10151b;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 10px;
+            color: #e9eef4;
+            padding: 0;
+            width: min(560px, calc(100vw - 32px));
+        }
+        .help-dialog[open] {
+            display: flex;
+            flex-direction: column;
+            max-height: min(82vh, 720px);
+        }
+        .help-dialog::backdrop { background: rgba(4, 8, 12, 0.66); }
+        .help-head {
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex: 0 0 auto;
+            gap: 12px;
+            justify-content: space-between;
+            padding: 14px 16px;
+        }
+        .help-head h2 {
+            font-size: 16px;
+            margin: 0;
+        }
+        .help-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            flex: 0 0 auto;
+            font: inherit;
+            height: 28px;
+            line-height: 1;
+            padding: 0;
+            width: 28px;
+        }
+        .help-close:hover { background: rgba(255, 255, 255, 0.26); }
+        .help-close:focus-visible {
+            outline: 2px solid #7fe3ff;
+            outline-offset: 2px;
+        }
+        .help-body {
+            font-size: 13px;
+            line-height: 1.55;
+            overflow-y: auto;
+            padding: 14px 16px 18px;
+        }
+        .help-intro {
+            color: #cfd8e3;
+            margin: 0;
+        }
+        .help-section { margin-top: 16px; }
+        .help-section h3 {
+            color: #7fe3ff;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            margin: 0 0 8px;
+            text-transform: uppercase;
+        }
+        .help-list { margin: 0; }
+        .help-item { margin: 0 0 10px; }
+        .help-item:last-child { margin-bottom: 0; }
+        .help-item dt {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .help-item dd {
+            color: #b9c4d0;
+            margin: 0;
+        }
+        .help-dialog kbd {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-bottom-width: 2px;
+            border-radius: 4px;
+            display: inline-block;
+            font-family: inherit;
+            font-size: 11px;
+            min-width: 18px;
+            padding: 1px 5px;
+            text-align: center;
+        }
+        .help-dialog .help-or {
+            color: #8b97a5;
+            margin: 0 2px;
+        }
+
     </style>
 </head>
 <body>
     <div id="info">
-        <span class="info-title">Visor 3D del terreno</span>
+        <div class="info-head">
+            <span class="info-title">Visor 3D del terreno</span>
+            <button id="helpToggle" class="help-toggle" type="button"
+                    aria-label="Cómo usar el visor 3D" aria-haspopup="dialog"
+                    aria-expanded="false" aria-controls="helpDialog">?</button>
+        </div>
         <a class="back-link" href="../../">&larr; Volver al mapa</a>
     </div>
     <div id="legend">
@@ -237,6 +365,93 @@
             </div>
         </div>
     </div>
+
+    <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle">
+        <div class="help-head">
+            <h2 id="helpTitle">Cómo usar el visor 3D</h2>
+            <button id="helpClose" class="help-close" type="button" aria-label="Cerrar la ayuda">✕</button>
+        </div>
+        <div class="help-body">
+            <p class="help-intro">
+                El visor dibuja el modelo digital de elevación de un volcán en tres dimensiones.
+                Gira la escena, acércate y cambia la escala de altura para leer mejor el relieve.
+            </p>
+
+            <section class="help-section">
+                <h3>Teclado</h3>
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>
+                            <span class="help-or">o</span>
+                            <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd></dt>
+                        <dd>Desplazan el punto de vista sobre el terreno.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt><kbd>Q</kbd> <span class="help-or">/</span> <kbd>E</kbd></dt>
+                        <dd>Giran el relieve sobre su eje vertical.</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="help-section">
+                <h3>Ratón y pantalla táctil</h3>
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt>Arrastrar con el botón izquierdo</dt>
+                        <dd>Gira la cámara alrededor del terreno.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Arrastrar con el botón derecho</dt>
+                        <dd>Desplaza la vista sin girarla.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Rueda del ratón</dt>
+                        <dd>Acerca y aleja. En pantallas táctiles, pellizca con dos dedos.</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="help-section">
+                <h3>Controles en pantalla</h3>
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt>Botones <kbd>+</kbd> y <kbd>−</kbd></dt>
+                        <dd>Acercan y alejan la cámara.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Flechas del panel «Desplazar»</dt>
+                        <dd>Mueven la vista hacia el norte, el sur, el este y el oeste.</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="help-section">
+                <h3>Opciones del visor</h3>
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt>MDE</dt>
+                        <dd>Elige el volcán o modelo digital de elevación que quieres explorar.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Paleta</dt>
+                        <dd>Cambia los colores con los que se representa la elevación.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Escala de altura</dt>
+                        <dd>Exagera o suaviza el relieve para distinguir mejor los detalles.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Malla</dt>
+                        <dd>Muestra el terreno como una red de triángulos en lugar de una superficie sólida.</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>Bloquear cámara</dt>
+                        <dd>Al activarlo, desplazar la vista ya no mueve la cámara: solo cambia hacia dónde mira.</dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
+    </dialog>
 
 
     <script type="module" src="./app.js"></script>

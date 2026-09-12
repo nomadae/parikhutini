@@ -40,12 +40,43 @@ const ORIENTATION_SPEED = 0.01;
 const keysPressed = {};
 const visualControlsPressed = {};
 
+// Help dialog ("?" button): explains the controls and the key bindings.
+const helpDialog = document.getElementById('helpDialog');
+const helpToggle = document.getElementById('helpToggle');
+const helpClose = document.getElementById('helpClose');
+
+function setHelpOpen(open) {
+  if (open === helpDialog.open) return;
+  if (open) {
+    // Drop held keys so the terrain does not lurch when the panel closes.
+    Object.keys(keysPressed).forEach((key) => { keysPressed[key] = false; });
+    helpDialog.showModal();
+  } else {
+    helpDialog.close();
+  }
+  helpToggle.setAttribute('aria-expanded', String(open));
+}
+
+helpToggle.addEventListener('click', () => setHelpOpen(true));
+helpClose.addEventListener('click', () => setHelpOpen(false));
+
+// A click on the backdrop lands on the dialog element itself.
+helpDialog.addEventListener('click', (event) => {
+  if (event.target === helpDialog) setHelpOpen(false);
+});
+// Escape closes the dialog natively; keep the toggle's state in sync.
+helpDialog.addEventListener('close', () => {
+  helpToggle.setAttribute('aria-expanded', 'false');
+});
+
 window.addEventListener('keydown', (e) => {
+  if (helpDialog.open) return; // the help panel owns the keyboard while open
   if (e.key.startsWith('Arrow') || ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'q', 'e', 'Q', 'E'].includes(e.key)) {
     keysPressed[e.key] = true;
   }
 });
 window.addEventListener('keyup', (e) => {
+  if (helpDialog.open) return;
   if (e.key.startsWith('Arrow') || ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'q', 'e', 'Q', 'E'].includes(e.key)) {
     keysPressed[e.key] = false;
   }
